@@ -17,9 +17,9 @@ We need to work:
  1. Supply autoconf/make-like TUI or pretty formatted file to configure what peripherals to use.
  2. Prepare special REPL command like below:
 
-'''
+```
 #use peripheral("VL53L0X", 500, 100)
-'''
+```
 
 500 is timeout, 100 is sampling rate.
 
@@ -28,9 +28,9 @@ It should be able to choose timeout, pin number, and so on by user.
  3. We may also supply way of disabling peripherals.
 
 e.g.
-'''
+```
 #disuse peripheral("VL53L0X")
-'''
+```
 
 So we may offer unique id to peripheral usage.
 
