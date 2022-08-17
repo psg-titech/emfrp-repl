@@ -9,11 +9,10 @@
 #include "em_result.h"
 #include "misc.h"
 #include <string.h>
-
 // ! Pascal String
 typedef struct string_t {
   // ! Buffer
-  char * buffer;
+  char_t * buffer;
   // ! Length of String.(Sometimes, Not actual size of buffer.)
   size_t length;
 } string_t;
@@ -36,26 +35,25 @@ void string_free(string_t * str);
  * \param buffer The buffer. Not copied.
  * \param length Length of buffer.
  */
-void string_new(string_t * out, char * buffer, const size_t length);
-
+void string_new(string_t * out, char_t * buffer, const size_t length);
 // ! Java's CharAt.
 /* !
  * \param str string_t to be referenced.
  * \param i Index
  */
-static inline char string_getAt(string_t * str, const int i) { return str->buffer[i]; }
+static inline char_t string_getAt(string_t * str, const int i) { return str->buffer[i]; }
 
 // ! Construct string_t by C String.
 /* !
  * \param out string_t to be constructed.
  * \param buffer The buffer. Not copied.
  */
-static inline void string_new1(string_t * out, char * buffer) { string_new(out, buffer, strlen(buffer)); }
+static inline void string_new1(string_t * out, char_t * buffer) { string_new(out, buffer, em_strlen(buffer)); }
 
 // ! Malloc and Construct string_t by C String.
 /* !
  * \param buffer The buffer. Not copied.
  * \return Malloc-ed and constructed string_t.
  */
-string_t * string_malloc_new(const char * buffer);
+string_t * string_malloc_new(const char_t * buffer);
 

@@ -18,7 +18,7 @@ parser_node_print(parser_node_t * n) {
 
 void
 parser_expression_print(parser_expression_t * e) {
-  if(e->kind & 1 == 1) {
+  if((e->kind & 1) == 1) {
     printf("(");
     parser_expression_print(e->value.binary.lhs);
     printf(" %s ", binary_op_table[e->kind]);
@@ -31,7 +31,7 @@ parser_expression_print(parser_expression_t * e) {
     case EXPR_KIND_INTEGER:
       printf("%d", e->value.integer); break;
     case EXPR_KIND_IDENTIFIER:
-      printf("%s", e->value.identifier); break;
+      printf("%s", e->value.identifier.buffer); break;
     }
   }
 }

@@ -3,6 +3,10 @@
 
 # CMake Directory
 /build
+/out
+
+# Visual Studio Directory
+/.vs
 
 # Prerequisites
 *.d

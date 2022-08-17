@@ -12,6 +12,8 @@ typedef enum em_result_t {
   EM_RESULT_OK = 0,
   // ! Memory is full.
   EM_RESULT_OUT_OF_MEMORY = 1,
+  // ! Invalid Argument
+  EM_RESULT_INVALID_ARGUMENT = 2,
   // ! Unknown Error.
   EM_RESULT_UNKNOWN_ERR
 } em_result;

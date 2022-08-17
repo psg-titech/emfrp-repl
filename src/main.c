@@ -7,13 +7,14 @@
 
 #include <stdio.h>
 #include "hal/console.h"
-#include "parser.h"
+#include "emfrp_parser.h"
 #include "ast.h"
 int main(void) {
   string_t line;
   parser_reader_t parser_reader;
   parser_node_t * parsed_node;
   string_null(&line);
+  initialize_console();
   read_line(&line);
   parser_reader_new(&parser_reader, &line);
   parser_context_t *ctx = parser_create(&parser_reader);

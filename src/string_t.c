@@ -24,15 +24,16 @@ string_free(string_t * str) {
 }
 
 void
-string_new(string_t * out, char * buffer, const size_t length) {
+string_new(string_t * out, char_t * buffer, const size_t length) {
   out->buffer = buffer;
   out->length = length;
 }
 
 string_t *
-string_malloc_new(const char * buffer) {
+string_malloc_new(const char_t * buffer) {
   string_t * ret = (string_t *)em_malloc(sizeof(string_t));
-  ret->length = strlen(buffer);
+  if (ret == nullptr) return nullptr;
+  ret->length = em_strlen(buffer);
   ret->buffer = em_strdup(buffer);
   return ret;
 }

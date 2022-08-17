@@ -1,4 +1,4 @@
 #!/bin/sh
-$1 -o parser $2
-mv parser.c $3
-mv parser.h $4
+$1 -o emfrp_parser $2
+mv emfrp_parser.c $3
+mv emfrp_parser.h $4
