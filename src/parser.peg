@@ -1,0 +1,68 @@
+%prefix "parser"
+
+%value "void *"
+%header {
+#include "string_t.h"
+#include "emmem.h"
+#include "em_result.h"
+typedef struct parser_reader_t {
+  string_t * line;
+  int cur;
+} parser_reader_t;
+
+em_result
+parser_reader_new(parser_reader_t * out, string_t * str);
+
+int
+parser_reader_getchar(parser_reader_t * reader);
+}
+
+%source {
+#include "ast.h"
+#include "misc.h"
+#define PCC_ERROR(auxil) fprintf(stderr, "ERROR")
+#define PCC_GETCHAR(auxil) parser_reader_getchar(auxil)
+#define PCC_MALLOC(auxil, size) em_malloc(size)
+#define PCC_REALLOC(auxil, ptr, size) em_realloc(ptr, size)
+#define PCC_FREE(auxil, ptr) em_free(ptr)
+
+em_result
+parser_reader_new(parser_reader_t * out, string_t * str) {
+  out->line = str;
+  out->cur = 0;
+  return EM_RESULT_OK;
+}
+ 
+int
+parser_reader_getchar(parser_reader_t * reader) {
+  if(reader->line->length > reader->cur)
+    return string_getAt(reader->line, reader->cur++);
+  else
+    return -1;
+}
+
+}
+
+node_definition <- _ 'node' _ n:identifier _ '=' _ e: expression _ EOL { $$ = parser_node_new(n, e); }
+expression <- t:term { $$ = t; }
+term <- l:term _ '+' _ r:factor { $$ = parser_expression_new_addition(l, r); }
+      / l:term _ '-' _ r:factor 
+      / e:factor                { $$ = e; }
+
+factor <- l:factor _ '*' _ r:unary 
+        / l:factor _ '/' _ r:unary 
+        / e:primary                { $$ = e; }
+
+unary <- '+' _ e:unary
+       / '-' _ e:unary
+       / e:primary     { $$ = e; }
+
+primary <- <[1-9][0-9]*>             { $$ = parser_expression_new_integer(atoi($1)); }
+         / <'0x'[0-9]+>              
+         / <'0'[0-9]+>
+         / '(' _ e:expression _ ')'    { $$ = e; }
+         / ident:identifier            { $$ = parser_expression_new_identifier(ident); em_free(ident); }
+
+_ <- [ \t]*
+EOL <- '\n' / '\r\n' / '\r' / ';' / !.
+identifier <- [a-zA-Z][a-zA-Z0-9_]+  { $$ = string_malloc_new($0); }
