@@ -1,1 +1,1 @@
-pkg install libedit
+pkg install libedit cmake

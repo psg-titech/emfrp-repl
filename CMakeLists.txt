@@ -26,6 +26,8 @@ set(SOURCES
     src/hal/console.win.c
     src/emfrp_parser.c
     src/ast.c
+    src/vm/exec.c
+    src/vm/machine.c
 )
 
 add_executable(emfrp-repl ${SOURCES})
