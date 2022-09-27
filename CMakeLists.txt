@@ -28,6 +28,9 @@ set(SOURCES
     src/ast.c
     src/vm/exec.c
     src/vm/machine.c
+    src/vm/node_t.c
+    src/collections/list_t.c
+    src/collections/dictionary_t.c
 )
 
 add_executable(emfrp-repl ${SOURCES})

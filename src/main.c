@@ -18,15 +18,23 @@ int main(void) {
   machine_t m;
   string_null(&line);
   initialize_console();
-  read_line(&line);
-  parser_reader_new(&parser_reader, &line);
-  parser_context_t *ctx = parser_create(&parser_reader);
-  if(!parser_parse(ctx, &parsed_node)) {
-    parser_node_print(parsed_node);
-    machine_new(&m);
-    em_result res = exec_ast(&m, parsed_node->expression,  &result_object);
-    printf("%d, %d\n", res,
-	   object_get_integer(result_object));
+  machine_new(&m);
+  while(true) {
+    read_line(&line);
+    parser_reader_new(&parser_reader, &line);
+    parser_context_t *ctx = parser_create(&parser_reader);
+    if(!parser_parse(ctx, &parsed_node)) {
+      parser_node_print(parsed_node);
+      em_result res = machine_add_node_ast(&m, parsed_node->name, parsed_node->expression);
+      if(res != EM_RESULT_OK) {
+	printf("add node failure: %d\n", res);
+	return 0;
+      }
+      res = exec_ast(&m, parsed_node->expression,  &result_object);
+      printf("%d, %d\n", res,
+	     object_get_integer(result_object));
+    }
+    parser_destroy(ctx);
   }
   return 0;
 }

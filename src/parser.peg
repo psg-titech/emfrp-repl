@@ -2,6 +2,7 @@
 
 %value "void *"
 %header {
+#pragma once
 #include "string_t.h"
 #include "emmem.h"
 #include "em_result.h"

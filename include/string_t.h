@@ -2,13 +2,15 @@
  * @file   string_t.h
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/8/17
+ * @date   2022/9/27
  ------------------------------------------- */
 
 #pragma once
 #include "em_result.h"
 #include "misc.h"
 #include <string.h>
+#include <stdbool.h>
+
 // ! Pascal String
 typedef struct string_t {
   // ! Buffer
@@ -57,3 +59,26 @@ static inline void string_new1(string_t * out, char_t * buffer) { string_new(out
  */
 string_t * string_malloc_new(const char_t * buffer);
 
+// ! Copy the string.
+/* !
+ * \param dst Destination
+ * \param src Source
+ */
+em_result string_copy(string_t * dst, const string_t * src);
+
+// ! Calculate the hash of given string.
+/* !
+ * \param self The string to be hashed.
+ * \return Hash value
+ */
+size_t string_hash(const string_t * self);
+
+// ! Compare given strings.
+/* !
+ * \param v1 The string
+ * \param v2 The string
+ * \return true if v1==v2.
+ */
+static inline bool string_compare(const string_t * v1, const string_t * v2) {
+  return (v1->length == v2->length) && (0 == strncmp(v1->buffer, v2->buffer, v1->length));
+}

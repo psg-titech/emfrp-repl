@@ -2,7 +2,7 @@
  * @file   string_t.c
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/8/17
+ * @date   2022/9/27
  ------------------------------------------- */
 
 #include "string_t.h"
@@ -35,5 +35,21 @@ string_malloc_new(const char_t * buffer) {
   if (ret == nullptr) return nullptr;
   ret->length = em_strlen(buffer);
   ret->buffer = em_strdup(buffer);
+  return ret;
+}
+
+em_result
+string_copy(string_t * dst, const string_t * src) {
+  dst->length = src->length;
+  dst->buffer = em_strdup(src->buffer);
+  return EM_RESULT_OK;
+}
+
+
+size_t
+string_hash(const string_t * self) {
+  size_t ret = 0;
+  for(int i = 0; i < self->length; ++i)
+    ret ^= self->buffer[i];
   return ret;
 }

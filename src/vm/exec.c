@@ -2,12 +2,13 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/26
+ * @date   2022/9/27
  ------------------------------------------- */
 
 #include "vm/exec.h"
 
-em_result exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t * l, parser_expression_t * r, object_t ** out) {
+em_result
+exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t * l, parser_expression_t * r, object_t ** out) {
   object_t * lro = nullptr, * rro = nullptr;
   em_result errres;
   CHKERR(exec_ast(m, l, &lro));
@@ -35,7 +36,8 @@ em_result exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expr
   return errres;
 }
 
-em_result exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
+em_result
+exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
   if(v->kind & 1 == 1) {
     CHKERR(exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out));
@@ -43,6 +45,10 @@ em_result exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
     switch(v->kind) {
     case EXPR_KIND_INTEGER:
       object_new_int(out, v->value.integer);
+      break;
+    case EXPR_KIND_IDENTIFIER:
+      if(!machine_search_node(m, out, &(v->value.identifier)))
+	return EM_RESULT_MISSING_IDENTIFIER;
       break;
     default:
       return EM_RESULT_INVALID_ARGUMENT;

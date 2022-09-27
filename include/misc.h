@@ -20,3 +20,10 @@ typedef char char_t;
 // nullptr is appeared in C23.
 #define nullptr NULL
 #endif
+
+#if !defined(MIN)
+#define MIN(v1, v2) (v1) > (v2) ? (v2) : (v1)
+#endif
+#if !defined(MAX)
+#define MAX(v1, v2) (v1) < (v2) ? (v2) : (v1)
+#endif
