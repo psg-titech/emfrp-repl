@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2022/9/29
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -39,7 +39,7 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
-  if(v->kind & 1 == 1) {
+  if(EXPR_KIND_IS_BIN_OP(v)) {
     CHKERR(exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out));
   } else {
     switch(v->kind) {
@@ -57,4 +57,28 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   return EM_RESULT_OK;
  err:
   return errres;
+}
+
+em_result
+get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
+  em_result errres;
+  if(v->kind == EXPR_KIND_IDENTIFIER) {
+    string_t * s = &(v->value.identifier);
+    CHKERR(list_add2(out, string_t *, &s));
+  } else if(EXPR_KIND_IS_BIN_OP(v)){
+    CHKERR(get_dependencies_ast(v->value.binary.lhs, out));
+    CHKERR(get_dependencies_ast(v->value.binary.rhs, out));
+  }
+  return EM_RESULT_OK;
+ err:
+  return errres;
+}
+
+bool
+check_depends_on_ast(parser_expression_t * v, string_t * str) {
+  if(v->kind == EXPR_KIND_IDENTIFIER)
+    return string_compare(&(v->value.identifier), str);
+  else if(EXPR_KIND_IS_BIN_OP(v))
+    return check_depends_on_ast(v->value.binary.lhs, str) || check_depends_on_ast(v->value.binary.rhs, str);
+  return false;
 }

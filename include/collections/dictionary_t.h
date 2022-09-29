@@ -2,7 +2,7 @@
  * @file   dictionary_t.h
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2022/9/29
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
@@ -24,12 +24,13 @@ em_result dictionary_new(dictionary_t * out);
 // ! Adding an item to the dictionary.
 /* !
  * \param out The dictionary to added to.
- * \param value The value to be added.
+ * \param value The value to be added. (And passed to comparer as the 2nd argument.)
  * \param value_size sizeof(value)
  * \param hasher The hashing function of value.
+ * \param comparer The compare function of value.
  * \return The status code
  */
-em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)));
+em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)));
 
 // ! Getting an item from the dictionary
 /* !

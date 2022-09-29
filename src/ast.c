@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/8/17
+ * @date   2022/9/29
  ------------------------------------------- */
 
 #include "ast.h"
@@ -34,4 +34,14 @@ parser_expression_print(parser_expression_t * e) {
       printf("%s", e->value.identifier.buffer); break;
     }
   }
+}
+
+void
+parser_expression_free(parser_expression_t * expr) {
+  if(EXPR_KIND_IS_BIN_OP(expr)) {
+    parser_expression_free(expr->value.binary.lhs);
+    parser_expression_free(expr->value.binary.rhs);
+  } else if(expr->kind == EXPR_KIND_IDENTIFIER)
+    string_free(&(expr->value.identifier));
+  free(expr);
 }

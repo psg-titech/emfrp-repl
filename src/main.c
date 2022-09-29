@@ -33,6 +33,7 @@ int main(void) {
       res = exec_ast(&m, parsed_node->expression,  &result_object);
       printf("%d, %d\n", res,
 	     object_get_integer(result_object));
+      machine_debug_print_definitions(&m);
     }
     parser_destroy(ctx);
   }

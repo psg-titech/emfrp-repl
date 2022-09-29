@@ -2,7 +2,7 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2022/9/29
  ------------------------------------------- */
 #include "collections/list_t.h"
 
@@ -37,6 +37,49 @@ list_contains(list_t * self, bool(comparer(void *, void *)), void * search_value
     cur = cur->next;
   }
   return false;
+}
+
+void
+list_free(list_t ** self) {
+  list_t * cur = *self;
+  while(cur != nullptr) {
+    list_t * f = cur;
+    cur = cur->next;
+    em_free(f);
+  }
+}
+
+list_t *
+list_remove(list_t ** self, bool(comparer(void *, void *)), void * search_value) {
+  list_t * cur = *self;
+  list_t ** delayptr = self;
+  while(cur != nullptr) {
+    if(comparer(&(cur->value), search_value)) {
+      *delayptr = cur->next;
+      cur->next = nullptr;
+      return cur;
+    }
+    delayptr = &(cur->next);
+    cur = cur->next;
+  }
+  return nullptr;
+}
+
+list_t *
+list_remove2(list_t ** self, bool(comparer(void *, void *)), void * search_value, list_t *** undo) {
+  list_t * cur = *self;
+  list_t ** delayptr = self;
+  while(cur != nullptr) {
+    if(comparer(&(cur->value), search_value)) {
+      *undo = delayptr;
+      *delayptr = cur->next;
+      cur->next = nullptr;
+      return cur;
+    }
+    delayptr = &(cur->next);
+    cur = cur->next;
+  }
+  return nullptr;
 }
 
 em_result

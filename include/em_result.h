@@ -20,6 +20,7 @@ typedef enum em_result_t {
   EM_RESULT_TYPE_MISMATCH = 16,
   // ! Missing Identifier
   EM_RESULT_MISSING_IDENTIFIER = 17,
+  EM_RESULT_CYCLIC_REFERENCE = 18,
   // ! Unknown Error.
   EM_RESULT_UNKNOWN_ERR
 } em_result;

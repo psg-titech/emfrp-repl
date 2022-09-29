@@ -54,6 +54,7 @@ bool machine_search_node(machine_t * self, object_t ** out, string_t * name);
  * \param name Name of the node
  * \return Whether found or not
  */
-bool
-macihne_is_defined(machine_t * self, string_t * name);
+bool macihne_is_defined(machine_t * self, string_t * name);
 
+// ! [DEBUG] Print node definitions.
+void machine_debug_print_definitions(machine_t * self);

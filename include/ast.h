@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/8/17
+ * @date   2022/9/29
  ------------------------------------------- */
 
 #pragma once
@@ -40,6 +40,9 @@ typedef enum parser_expression_kind_t : int32_t {
   // ! Identifier
   EXPR_KIND_IDENTIFIER = 4
 } parser_expression_kind_t;
+
+#define EXPR_KIND_IS_BIN_OP(expr) ((expr)->kind & 1 == 1)
+#define EXPR_KIND_IS_RAW_OP(expr) ((expr)->kind & 2 == 2)
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
@@ -129,6 +132,13 @@ parser_expression_new_identifier(string_t * ident) {
   ret->value.identifier = *ident;
   return ret;
 }
+
+// ! Freeing parser_expression_t.
+/* !
+ * \param expr The expression to be freed.
+ */
+void
+parser_expression_free(parser_expression_t * expr);
 
 // ! Used for parser_expression_print.
 static char * binary_op_table[] = {
