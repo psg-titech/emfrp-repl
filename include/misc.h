@@ -28,3 +28,11 @@ typedef void* nullptr_t;
 #if !defined(MAX)
 #define MAX(v1, v2) (v1) < (v2) ? (v2) : (v1)
 #endif
+
+#if _MSC_VER
+#define DEBUGBREAK __debugbreak()
+#elif __GNUC__
+#define DEBUGBREAK __builtin_trap()
+#elif __clang__	
+#define DEBUGBREAK __builtin_debugtrap()
+#endif
