@@ -31,6 +31,7 @@ set(SOURCES
     src/vm/node_t.c
     src/collections/list_t.c
     src/collections/dictionary_t.c
+    src/emfrp.c
 )
 
 add_executable(emfrp-repl ${SOURCES})

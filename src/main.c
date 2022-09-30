@@ -2,14 +2,15 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/26
+ * @date   2022/9/30
  ------------------------------------------- */
 
 #include <stdio.h>
 #include "hal/console.h"
 #include "emfrp_parser.h"
 #include "ast.h"
-#include "vm.h"
+#include "vm/machine.h"
+#include "vm/exec.h"
 int main(void) {
   string_t line;
   parser_reader_t parser_reader;
@@ -23,7 +24,7 @@ int main(void) {
     read_line(&line);
     parser_reader_new(&parser_reader, &line);
     parser_context_t *ctx = parser_create(&parser_reader);
-    if(!parser_parse(ctx, &parsed_node)) {
+    if(!parser_parse(ctx, (void **)&parsed_node)) {
       parser_node_print(parsed_node);
       em_result res = machine_add_node_ast(&m, parsed_node->name, parsed_node->expression);
       if(res != EM_RESULT_OK) {
@@ -34,6 +35,7 @@ int main(void) {
       printf("%d, %d\n", res,
 	     object_get_integer(result_object));
       machine_debug_print_definitions(&m);
+      em_free(parsed_node);
     }
     parser_destroy(ctx);
   }

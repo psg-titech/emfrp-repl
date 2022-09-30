@@ -52,6 +52,21 @@ string_compare2(void * l, void * r) {
   return string_compare(*ll, rr);
 }
 
+void
+node_cleaner(void * v) {
+  node_t * n = (node_t *)v;
+  string_free(&(n->name));
+  if(n->program_kind == NODE_PROGRAM_KIND_AST)
+    parser_expression_free(n->program.ast);
+}
+
+void
+value_of_node_cleaner(void * v) {
+  value_of_node_t * vn = (value_of_node_t *)v;
+  string_free(&(vn->name));
+  object_free(vn->value);
+}
+
 em_result
 machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog) {
   em_result errres;
@@ -98,21 +113,52 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     }
     */
     /* list_t <node_t> * */ removed = list_remove(&(self->nodes.head), node_compare, &str);
-    
-    parser_expression_free(((node_t *)&(removed->value))->program.ast);
+
+    node_cleaner(&(removed->value));
     em_free(removed);
-        
+       
     CHKERR(list_add2(delay, node_t, &new_node));
   }
   else
     CHKERR(queue_enqueue2(&(self->nodes), node_t, &new_node));
-  CHKERR(dictionary_add(&(self->node_values), &new_val, sizeof(value_of_node_t), value_of_node_hasher, value_of_node_compare2));
+  CHKERR(dictionary_add(&(self->node_values), &new_val, sizeof(value_of_node_t), value_of_node_hasher, value_of_node_compare2, value_of_node_cleaner));
   return EM_RESULT_OK;
  err:
   if(new_val.name.buffer != nullptr)
     string_free(&(new_val.name));
   if(new_node.name.buffer != nullptr)
     string_free(&(new_node.name));
+  object_free(new_val.value);
+  return errres;
+}
+
+em_result
+machine_add_node_callback(machine_t * self, string_t str, node_callback_t callback) {
+  em_result errres;
+  node_t new_node = { 0 };
+  value_of_node_t new_val = { 0 };
+  CHKERR(string_copy(&(new_val.name), &str));
+  if(callback == nullptr){
+    new_val.value = nullptr;
+    CHKERR(node_new_nothing(&new_node, str));
+  } else {
+    new_val.value = callback();
+    CHKERR(node_new_callback(&new_node, str, callback));
+  }
+  if(dictionary_contains(&(self->node_values), value_of_node_hasher, value_of_node_compare, &str)) {
+    list_t * /*<node_t> */ removed = list_remove(&(self->nodes.head), node_compare, &str);
+    node_cleaner(&(removed->value));
+    em_free(removed);
+  }
+  CHKERR(list_add2(&self->nodes.head, node_t, &new_node));
+  CHKERR(dictionary_add(&(self->node_values), &new_val, sizeof(value_of_node_t), value_of_node_hasher, value_of_node_compare2, value_of_node_cleaner));
+  return EM_RESULT_OK;
+ err:
+  if(new_val.name.buffer != nullptr)
+    string_free(&(new_val.name));
+  if(new_node.name.buffer != nullptr)
+    string_free(&(new_node.name));
+  object_free(new_val.value);
   return errres;
 }
 

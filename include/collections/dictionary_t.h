@@ -28,9 +28,10 @@ em_result dictionary_new(dictionary_t * out);
  * \param value_size sizeof(value)
  * \param hasher The hashing function of value.
  * \param comparer The compare function of value.
+ * \param replacer The replace function for existing item. (nullable)
  * \return The status code
  */
-em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)));
+em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)));
 
 // ! Getting an item from the dictionary
 /* !

@@ -17,13 +17,15 @@ dictionary_new(dictionary_t * out) {
 }
 
 em_result
-dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *))) {
+dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *))) {
   em_result errres;
   size_t hashed = hasher(value) % DICTIONARY_TABLE_SIZE;
   void * overwrite;
-  if(list_search(out->values[hashed], &overwrite, comparer, value))
+  if(list_search(out->values[hashed], &overwrite, comparer, value)) {
+    if(replacer != nullptr)
+      replacer(overwrite);
     memcpy(overwrite, value, value_size);
-  else
+  }else
     CHKERR(list_add(&(out->values[hashed]), value_size, value));
   return EM_RESULT_OK;
  err:

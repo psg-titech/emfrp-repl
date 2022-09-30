@@ -14,3 +14,22 @@ node_new_ast(node_t * out, string_t name, parser_expression_t * ast) {
   out->program.ast = ast;
   return EM_RESULT_OK;
 }
+
+em_result
+node_new_callback(node_t * out, string_t name, node_callback_t callback) {
+  out->name = name;
+  out->program_kind = NODE_PROGRAM_KIND_CALLBACK;
+  out->program.callback = callback;
+  return EM_RESULT_OK;
+}
+
+void
+node_deep_free(node_t * v) {
+  string_free(&(v->name));
+  switch(v->program_kind) {
+  case NODE_PROGRAM_KIND_AST:
+    parser_expression_free(v->program.ast);
+    break;
+  }
+  em_free(v);
+}
