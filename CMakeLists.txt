@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_C_STANDARD 11)
 if (UNIX)
     if (EXISTS "${PROJECT_SOURCE_DIR}/packcc/build/clang/release/bin/packcc")
-        set(PACKCC_BUILD_DIR ${PROJECT_SOURCE_DIR}/packcc/build/gcc/release)
-    else
         set(PACKCC_BUILD_DIR ${PROJECT_SOURCE_DIR}/packcc/build/clang/release)
+    else ()
+        set(PACKCC_BUILD_DIR ${PROJECT_SOURCE_DIR}/packcc/build/gcc/release)
     endif ()
     add_custom_command(
         OUTPUT ${PROJECT_SOURCE_DIR}/src/emfrp_parser.c
