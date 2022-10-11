@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2022/10/11
  ------------------------------------------- */
 
 #pragma once
@@ -13,14 +13,9 @@
 #include "vm/node_t.h"
 #include "vm/object_t.h"
 
-typedef struct value_of_node_t {
-  string_t name;
-  object_t * value;
-} value_of_node_t;
-
 typedef struct machine_t {
-  queue_t /*<node_t>*/ nodes;
-  dictionary_t /*<value_of_node_t>*/ node_values;
+  queue_t /*<node_t*>*/ execution_list;
+  dictionary_t /*<node_t>*/ nodes;
 } machine_t;
 
 // ! Constructor of machine_t.

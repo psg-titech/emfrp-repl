@@ -2,7 +2,7 @@
  * @file   arraylist_t.c
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2022/10/11
  ------------------------------------------- */
 #include "collections/arraylist_t.h"
 
@@ -49,13 +49,7 @@ arraylist_insert(arraylist_t * self, size_t index, size_t item_size, void * valu
 #endif
   if(self->length + 1 > out->capacity)
     CHKERR(arraylist_resize(self, item_size));
-  // reverse version of memcpy
-  char * leftmost = (char *)(self->buffer + (item_size * index));
-  for(char * src = (char *)(self->buffer + (item_size * (self->length - 1))),
-	* dst = (char *)(self->buffer + (item_size * self->length));
-      leftmost <= src; --src, --dst) {
-    *dst = *src;
-  }
+  memmove(self->buffer + (item_size * (index + 1)), self->buffer + (item_size * index), (buffer->length - index) * item_size); 
   memcpy(self->buffer + (item_size * index), value, item_size);
   self->length++;
   return EM_RESULT_OK;
@@ -79,18 +73,15 @@ void arraylist_removeinsert(arraylist_t * self, void ** out, size_t remove_index
   if(out_size > 0 && out != nullptr)
     memcpy(out, self->buffer + (item_size * index), out_size);
   if(remove_index == insert_index) {
-  } else if(remove_index < insert_index) {
+  } else if(remove_index < insert_index)
     memcpy(self->buffer + (item_size * remove_index),
 	   self->buffer + (item_size * remove_index) + item_size,
-	   item_size * (insert_index - remove_index - 1));
-  } else {
-    char * leftmost = (char *)(self->buffer + (item_size * insert_index));
-    for(char * src = (char *)(self->buffer + (item_size * remove_index)),
-	  * dst = (char *)(self->buffer + (item_size * remove_index) + item_size);
-	leftmost <= src; --src, --dst) {
-      *dst = *src;
-    }
-  }
+	   item_size * (insert_index - remove_index));
+  else
+    memmove(self->buffer + (item_isze * (insert_index + 1)),
+            self->buffer + (item_size * insert_index),
+            (remove_index - insert_index) * item_size);
+  
   memcpy(self->buffer + (item_size * insert_index), value, item_size);
 }
 

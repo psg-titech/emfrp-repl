@@ -2,7 +2,7 @@
  * @file   dictionary_t.c
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2022/10/11
  ------------------------------------------- */
 #include "collections/dictionary_t.h"
 
@@ -27,6 +27,23 @@ dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hashe
     memcpy(overwrite, value, value_size);
   }else
     CHKERR(list_add(&(out->values[hashed]), value_size, value));
+  return EM_RESULT_OK;
+ err:
+  return errres;
+}
+
+em_result
+dictionary_add2(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)), void ** entry_ptr) {
+  em_result errres;
+  size_t hashed = hasher(value) % DICTIONARY_TABLE_SIZE;
+  void * overwrite;
+  if(list_search(out->values[hashed], &overwrite, comparer, value)) {
+    if(replacer != nullptr)
+      replacer(overwrite);
+    *entry_ptr = overwrite;
+    memcpy(overwrite, value, value_size);
+  }else
+    CHKERR(list_add3(&(out->values[hashed]), value_size, value, entry_ptr));
   return EM_RESULT_OK;
  err:
   return errres;

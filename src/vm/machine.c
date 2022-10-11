@@ -2,105 +2,77 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/11
  ------------------------------------------- */
 
 #include "vm/machine.h"
 #include "vm/exec.h"
 #include <stdio.h>
 
-size_t
-value_of_node_hasher(void * val) {
-  value_of_node_t * value = (value_of_node_t *)val;
-  return string_hash(&(value->name));
-}
+size_t string_hasher(void * s) { return string_hash((string_t *)s); }
+size_t node_hasher(void * val) { return string_hash(&(((node_t *)val)->name)); }
+// node_t and string_t
+bool node_compare(void * l, void * r) { return string_compare(&(((node_t *)l)->name), (string_t *)r); }
 
 bool
-value_of_node_compare(void * l, void * r) {
-  value_of_node_t * lhs = (value_of_node_t *)l;
-  string_t * rhs = (string_t *)r;
-  return string_compare(&(lhs->name), rhs);
-}
-
-bool
-value_of_node_compare2(void * l, void * r) {
-  value_of_node_t * lhs = (value_of_node_t *)l;
-  value_of_node_t * rhs = (value_of_node_t *)r;
+node_compare2(void * l, void * r) {
+  node_t * lhs = (node_t *)l;
+  node_t * rhs = (node_t *)r;
   return string_compare(&(lhs->name), &(rhs->name));
-}
-
-bool
-node_compare(void * l, void * r) {
-  node_t * ll = (node_t *)l;
-  string_t * rr = (string_t *) r;
-  return string_compare(&(ll->name), rr);
 }
 
 em_result
 machine_new(machine_t * out) {
   em_result errres;
-  CHKERR(queue_default(&(out->nodes)));
-  CHKERR(dictionary_new(&(out->node_values)));
+  CHKERR(queue_default(&(out->execution_list)));
+  CHKERR(dictionary_new(&(out->nodes)));
   return EM_RESULT_OK;
  err: return errres;
 }
 
 bool
-string_compare2(void * l, void * r) {
-  string_t ** ll = (string_t **)l;
-  string_t * rr = (string_t *)r;
-  return string_compare(*ll, rr);
-}
-
+string_compare2(void * l, void * r) {  return string_compare(*((string_t **)l), (string_t *)r); }
 void
-node_cleaner(void * v) {
-  node_t * n = (node_t *)v;
-  string_free(&(n->name));
-  if(n->program_kind == NODE_PROGRAM_KIND_AST)
-    parser_expression_free(n->program.ast);
-}
-
-void
-value_of_node_cleaner(void * v) {
-  value_of_node_t * vn = (value_of_node_t *)v;
-  string_free(&(vn->name));
-  object_free(vn->value);
-}
+node_cleaner(void * v) { node_deep_free((node_t *)v);}
 
 em_result
 machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog) {
   em_result errres;
   node_t new_node = { 0 };
-  value_of_node_t new_val = { 0 };
-  CHKERR(string_copy(&(new_val.name), &str));
-  CHKERR(exec_ast(self, prog, &new_val.value));
+  node_t * ptr_to_new_node;
   CHKERR(node_new_ast(&new_node, str, prog));
-  if(dictionary_contains(&(self->node_values), value_of_node_hasher, value_of_node_compare, &str)) {
+  CHKERR(exec_ast(self, prog, &new_node.value));
+  bool isDefined = dictionary_contains(&(self->nodes), string_hasher, node_compare, &str);
+  CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
+  if(isDefined) {
     list_t * /*<string_t *>*/ dependencies;
-    list_t * /*<node_t>*/ cur = self->nodes.head;
-    list_t ** /*<node_t>*/ delay = &self->nodes.head;
+    list_t * /*<node_t *>*/ cur = self->execution_list.head;
+    list_t ** /*<node_t *>*/ delay = &self->execution_list.head;
     list_t * /*<string_t *>*/ removed = nullptr;
     CHKERR(list_default(&dependencies));
     CHKERR(get_dependencies_ast(prog, &dependencies));
-    while(!LIST_IS_EMPTY(&dependencies) && !LIST_IS_EMPTY(&cur)) { // actually null check for cur is not needed.
-      node_t * n = (node_t *)&(cur->value);
-      removed = list_remove(&dependencies, string_compare2, &(n->name));
-      em_free(removed);
+    while(!LIST_IS_EMPTY(&cur)) {
+      node_t * n = (node_t *)(cur->value);
+      do {
+        removed = list_remove(&dependencies, string_compare2, &(n->name));
+        if(removed != nullptr) em_free(removed);
+      } while(removed != nullptr);
       delay = &((*delay)->next);
       cur = LIST_NEXT(cur);
-      if(removed != nullptr && LIST_IS_EMPTY(&dependencies)) break;
+      if(LIST_IS_EMPTY(&dependencies)) break;  // All dependencies are satisfied.
     }
+    // Also all dependencies are not satisfied.
     if(!LIST_IS_EMPTY(&dependencies)) {
       errres = EM_RESULT_MISSING_IDENTIFIER;
       list_free(&dependencies);
       goto err;
     }
-    // CHECK DEPENDENCIES!
-    list_t * pcur = self->nodes.head;
+    // CHECK CYCLIC DEPENDENCIES!
+    list_t * pcur = self->execution_list.head;
     while(pcur != cur) {
-      if(check_depends_on_ast(((node_t * )(&(pcur->value)))->program.ast, &str)) {
-	errres = EM_RESULT_CYCLIC_REFERENCE;
-	goto err;
+      if(check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
+        errres = EM_RESULT_CYCLIC_REFERENCE;
+        goto err;
       }
       pcur = pcur->next;
     }
@@ -112,23 +84,17 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
       }
     }
     */
-    /* list_t <node_t> * */ removed = list_remove(&(self->nodes.head), node_compare, &str);
-
-    node_cleaner(&(removed->value));
+    /* list_t <node_t *> * */ removed = list_remove(&(self->execution_list.head), string_compare2, &str);
     em_free(removed);
-       
-    CHKERR(list_add2(delay, node_t, &new_node));
+    CHKERR(list_add2(delay, node_t *, &ptr_to_new_node));
   }
   else
-    CHKERR(queue_enqueue2(&(self->nodes), node_t, &new_node));
-  CHKERR(dictionary_add(&(self->node_values), &new_val, sizeof(value_of_node_t), value_of_node_hasher, value_of_node_compare2, value_of_node_cleaner));
+    CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   return EM_RESULT_OK;
  err:
-  if(new_val.name.buffer != nullptr)
-    string_free(&(new_val.name));
   if(new_node.name.buffer != nullptr)
     string_free(&(new_node.name));
-  object_free(new_val.value);
+  object_free(new_node.value);
   return errres;
 }
 
@@ -136,36 +102,32 @@ em_result
 machine_add_node_callback(machine_t * self, string_t str, node_callback_t callback) {
   em_result errres;
   node_t new_node = { 0 };
-  value_of_node_t new_val = { 0 };
-  CHKERR(string_copy(&(new_val.name), &str));
+  node_t * ptr_to_node = nullptr;
   if(callback == nullptr){
-    new_val.value = nullptr;
     CHKERR(node_new_nothing(&new_node, str));
+    new_node.value = nullptr;
   } else {
-    new_val.value = callback();
     CHKERR(node_new_callback(&new_node, str, callback));
+    new_node.value = callback();
   }
-  if(dictionary_contains(&(self->node_values), value_of_node_hasher, value_of_node_compare, &str)) {
-    list_t * /*<node_t> */ removed = list_remove(&(self->nodes.head), node_compare, &str);
-    node_cleaner(&(removed->value));
-    em_free(removed);
+  bool isDefined = dictionary_contains(&(self->nodes), string_hasher, node_compare, &str);
+  CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_node));
+  if(isDefined) {
+    list_remove(&(self->execution_list.head), string_compare2, &str);
   }
-  CHKERR(list_add2(&self->nodes.head, node_t, &new_node));
-  CHKERR(dictionary_add(&(self->node_values), &new_val, sizeof(value_of_node_t), value_of_node_hasher, value_of_node_compare2, value_of_node_cleaner));
+  CHKERR(list_add2(&self->execution_list.head, node_t *, &ptr_to_node));
   return EM_RESULT_OK;
  err:
-  if(new_val.name.buffer != nullptr)
-    string_free(&(new_val.name));
   if(new_node.name.buffer != nullptr)
     string_free(&(new_node.name));
-  object_free(new_val.value);
+  em_free(new_node.value);
   return errres;
 }
 
 bool
 machine_search_node(machine_t * self, object_t ** out, string_t * name) {
-  value_of_node_t * o;
-  if(!dictionary_get(&(self->node_values), (void**)&o, value_of_node_hasher, value_of_node_compare, name))
+  node_t * o;
+  if(!dictionary_get(&(self->nodes), (void**)&o, node_hasher, node_compare, name))
     return false;
   *out = o->value;
   return true;
@@ -173,14 +135,14 @@ machine_search_node(machine_t * self, object_t ** out, string_t * name) {
 
 bool
 macihne_is_defined(machine_t * self, string_t * name) {
-  return dictionary_contains(&(self->node_values), value_of_node_hasher, value_of_node_compare, name);
+  return dictionary_contains(&(self->nodes), node_hasher, node_compare, name);
 }
 
 void
 machine_debug_print_definitions(machine_t * self) {
-  list_t * cur = self->nodes.head;
+  list_t * cur = self->execution_list.head;
   while(cur != nullptr) {
-    node_t * n = (node_t *)&(cur->value);
+    node_t * n = (node_t *)(cur->value);
     printf("Node<%s>\n", n->name.buffer);
     cur = cur->next;
   }

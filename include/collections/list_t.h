@@ -2,7 +2,7 @@
  * @file   list_t.h
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/11
  ------------------------------------------- */
 #pragma once
 #include "emmem.h"
@@ -45,6 +45,17 @@ static inline em_result list_default(list_t ** out) {
  */
 em_result list_add(list_t ** out, size_t value_size, void * value);
 #define list_add2(out, ty, val) list_add(out, sizeof(ty), val)
+
+// ! Adding an item to the list.
+/* !
+ * /param out The list to add to
+ * /param value_size sizeof(value)
+ * /param value The value to be added
+ * /param entry_ptr The pointer of copied buffer
+ * /return The status code
+ */
+em_result list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr);
+
 
 // ! Search an item.
 /* !

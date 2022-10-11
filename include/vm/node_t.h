@@ -2,7 +2,7 @@
  * @file   node_t.h
  * @brief  Emfrp Node Definition(IR)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2022/10/11
  ------------------------------------------- */
 #pragma once
 #include "ast.h"
@@ -36,6 +36,9 @@ typedef struct node_t {
     // ! CallBack
     node_callback_t callback;
   } program;
+  object_t * value;
+  // ! The action when the value is changed.
+  void (*action)(object_t *);
 } node_t;
 
 // ! Construct node_t without any programs.
@@ -48,6 +51,8 @@ static inline em_result node_new_nothing(node_t * out, string_t name) {
   out->name = name;
   out->program_kind = NODE_PROGRAM_KIND_NOTHING;
   out->program.nothing = nullptr;
+  out->value = nullptr;
+  out->action = nullptr;
   return EM_RESULT_OK;
 }
 

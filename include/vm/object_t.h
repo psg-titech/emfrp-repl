@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/26
+ * @date   2022/10/11
  ------------------------------------------- */
 
 #pragma once
@@ -91,7 +91,7 @@ static inline int32_t object_get_integer(object_t * v) {
  * \param v The object to be freed.
  */
 static inline void object_free(object_t * v) {
-  if(((size_t)v & 3) == 0) em_free(v);
+  if(((size_t)v & 3) == 0 && v != nullptr) em_free(v);
 }
 
 // ! Construct the new integer object.

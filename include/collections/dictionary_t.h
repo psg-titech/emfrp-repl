@@ -2,7 +2,7 @@
  * @file   dictionary_t.h
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/11
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
@@ -32,6 +32,19 @@ em_result dictionary_new(dictionary_t * out);
  * \return The status code
  */
 em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)));
+
+// ! Adding an item to the dictionary. This returns the pointer of copied buffer.
+/* !
+ * \param out The dictionary to added to.
+ * \param value The value to be added. (And passed to comparer as the 2nd argument.)
+ * \param value_size sizeof(value)
+ * \param hasher The hashing function of value.
+ * \param comparer The compare function of value.
+ * \param replacer The replace function for existing item. (nullable)
+ * \param entry_ptr The pointer of copied buffer.
+ * \return The status code
+ */
+em_result dictionary_add2(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)), void** entry_ptr);
 
 // ! Getting an item from the dictionary
 /* !

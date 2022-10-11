@@ -2,7 +2,7 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/11
  ------------------------------------------- */
 #include "collections/list_t.h"
 
@@ -15,6 +15,16 @@ list_add(list_t ** out, size_t value_size, void * value) {
   return EM_RESULT_OK;
 }
 
+em_result
+list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr) {
+  list_t * ret = (list_t *)em_malloc(sizeof(list_t *) + value_size);
+  ret->next = *out;
+  memcpy(&(ret->value), value, value_size);
+  *out = ret;
+  *entry_ptr = &(ret->value);
+  return EM_RESULT_OK;
+}
+  
 bool
 list_search(list_t * self, void ** out, bool(comparer(void *, void *)), void * search_value) {
   list_t * cur = self;
