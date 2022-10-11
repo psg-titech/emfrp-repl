@@ -42,7 +42,10 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
   node_t * ptr_to_new_node;
   CHKERR(node_new_ast(&new_node, str, prog));
   CHKERR(exec_ast(self, prog, &new_node.value));
-  bool isDefined = dictionary_contains(&(self->nodes), string_hasher, node_compare, &str);
+  node_t * out_val = nullptr;
+  bool isDefined = dictionary_get(&(self->nodes), (void**)&out_val, string_hasher, node_compare, &str);
+  if(out_val != nullptr)
+    new_node.action = out_val->action;
   CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
   if(isDefined) {
     list_t * /*<string_t *>*/ dependencies;
@@ -87,6 +90,9 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     /* list_t <node_t *> * */ removed = list_remove(&(self->execution_list.head), string_compare2, &str);
     em_free(removed);
     CHKERR(list_add2(delay, node_t *, &ptr_to_new_node));
+    if(LIST_IS_EMPTY(&((*delay)->next))) {
+      self->execution_list.last = &((*delay)->next);
+    }
   }
   else
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
@@ -136,6 +142,35 @@ machine_search_node(machine_t * self, object_t ** out, string_t * name) {
 bool
 macihne_is_defined(machine_t * self, string_t * name) {
   return dictionary_contains(&(self->nodes), node_hasher, node_compare, name);
+}
+
+em_result
+machine_indicate(machine_t * self, string_t * names) {
+  // names is currently ignored. i.e. All of nodes are executed.
+  em_result errres;
+  list_t * /*<node_t*>*/ cur = self->execution_list.head;
+  while(!LIST_IS_EMPTY(&cur)) {
+    node_t * v = (node_t *)cur->value;
+    CHKERR(exec_ast(self, v->program.ast, &(v->value)));
+    cur = LIST_NEXT(cur);
+  }
+  return EM_RESULT_OK;
+ err:
+  return errres;
+}
+
+em_result
+machine_add_output_node(machine_t * self, string_t name, node_event_delegate_t callback) {
+  node_t * ptrToNode = nullptr;
+  if(dictionary_get(&(self->nodes), (void**)(&ptrToNode), node_hasher, node_compare, &name)) {
+    ptrToNode->action = callback;
+    string_free(&name);
+  } else {
+    node_t new_node = { 0 };
+    node_new_nothing(&new_node, name);
+    new_node.action = callback;
+  }
+  return EM_RESULT_OK;
 }
 
 void

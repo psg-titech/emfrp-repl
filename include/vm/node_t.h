@@ -20,6 +20,7 @@ typedef enum node_program_kind {
 } node_program_kind;
 
 typedef object_t * (*node_callback_t)(void);
+typedef void (*node_event_delegate_t)(object_t *);
 
 // ! Node definition struct.
 typedef struct node_t {

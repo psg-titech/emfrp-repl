@@ -60,5 +60,22 @@ bool machine_search_node(machine_t * self, object_t ** out, string_t * name);
  */
 bool macihne_is_defined(machine_t * self, string_t * name);
 
+// ! Indicate Changed
+/* !
+ * \param self The machine
+ * \param name List of names of the changed node.(Nullable)
+ * \return The status code
+ */
+em_result machine_indicate(machine_t * self, string_t * names);
+
+// ! Register the output node
+/* !
+ * \param self The machine
+ * \param name Name of the node
+ * \param callback The delegate.
+ * \return The status code
+ */
+em_result machine_add_output_node(machine_t * self, string_t name, node_event_delegate_t callback);
+
 // ! [DEBUG] Print node definitions.
 void machine_debug_print_definitions(machine_t * self);
