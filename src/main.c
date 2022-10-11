@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2022/10/11
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -22,6 +22,7 @@ int main(void) {
   machine_new(&m);
   while(true) {
     read_line(&line);
+    if(line.length == 0) continue;
     parser_reader_new(&parser_reader, &line);
     parser_context_t *ctx = parser_create(&parser_reader);
     if(!parser_parse(ctx, (void **)&parsed_node)) {
