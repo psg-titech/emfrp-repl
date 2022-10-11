@@ -46,7 +46,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
   bool isDefined = dictionary_get(&(self->nodes), (void**)&out_val, string_hasher, node_compare, &str);
   if(out_val != nullptr)
     new_node.action = out_val->action;
-  CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
+
   if(isDefined) {
     list_t * /*<string_t *>*/ dependencies;
     list_t * /*<node_t *>*/ cur = self->execution_list.head;
@@ -54,6 +54,8 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     list_t * /*<string_t *>*/ removed = nullptr;
     CHKERR(list_default(&dependencies));
     CHKERR(get_dependencies_ast(prog, &dependencies));
+    // Search where to insert.
+    // Inserted after all dependencies are satisfied.
     while(!LIST_IS_EMPTY(&cur)) {
       node_t * n = (node_t *)(cur->value);
       do {
@@ -71,6 +73,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
       goto err;
     }
     // CHECK CYCLIC DEPENDENCIES!
+    // Search 
     list_t * pcur = self->execution_list.head;
     while(pcur != cur) {
       if(check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
@@ -79,23 +82,18 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
       }
       pcur = pcur->next;
     }
-    /*
-    if(string_compare(&(((node_t *)(&(cur->value)))->name), &str)) {
-      cur = cur->next;
-      if(cur == nullptr) {
-	printf("BUG!\n");
-      }
-    }
-    */
     /* list_t <node_t *> * */ removed = list_remove(&(self->execution_list.head), string_compare2, &str);
     em_free(removed);
+    CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(list_add2(delay, node_t *, &ptr_to_new_node));
     if(LIST_IS_EMPTY(&((*delay)->next))) {
       self->execution_list.last = &((*delay)->next);
     }
   }
-  else
+  else {
+    CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
+  }
   return EM_RESULT_OK;
  err:
   if(new_node.name.buffer != nullptr)
