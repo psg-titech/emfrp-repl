@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2022/10/12
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -14,7 +14,7 @@ typedef struct emfrp_t{
   machine_t * machine;
 } emfrp_t;
 
-emfrp_t * EM_EXPORTDECL
+EM_EXPORTDECL emfrp_t *
 emfrp_create(void) {
   em_result errres;
   emfrp_t * ret = nullptr;
@@ -31,7 +31,7 @@ emfrp_create(void) {
   return nullptr;
 }
 
-bool EM_EXPORTDECL
+EM_EXPORTDECL bool
 emfrp_repl(emfrp_t * self, char * str) {
   parser_reader_t parser_reader;
   parser_node_t * parsed_node;
@@ -51,15 +51,15 @@ emfrp_repl(emfrp_t * self, char * str) {
   return true;
 }
 
-bool EM_EXPORTDECL
+EM_EXPORTDECL bool
 emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_callback callback) {
   string_t s;
   string_new1(&s, node_name);
   return machine_add_node_callback(self->machine, s, callback) != EM_RESULT_OK;
 } 
-bool EM_EXPORTDECL emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value) {
+EM_EXPORTDECL bool emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value) {
   return false;
 }
-bool EM_EXPORTDECL emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_callback callback) {
+EM_EXPORTDECL bool emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_callback callback) {
   return false;
 }

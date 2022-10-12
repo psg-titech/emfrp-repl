@@ -47,6 +47,7 @@ if (UNIX)
             /usr/local/include
     )
 elseif (WIN32)
+    add_compile_definitions(EMFRP_EXPORTING=1)
     target_include_directories(emfrp-repl
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include

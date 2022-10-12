@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/12
  ------------------------------------------- */
 
 #pragma once
@@ -82,8 +82,8 @@ static inline int32_t object_get_integer(object_t * v) {
     return -1;
   }
 #endif
-  int32_t ret = (size_t)v;
-  return ret >> 2;
+  size_t ret = (size_t)v;
+  return (int32_t)(ret >> 2);
 }
 
 // ! Freeing the given object.

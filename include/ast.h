@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/12
  ------------------------------------------- */
 
 #pragma once
@@ -41,8 +41,8 @@ typedef enum parser_expression_kind_t : int32_t {
   EXPR_KIND_IDENTIFIER = 4
 } parser_expression_kind_t;
 
-#define EXPR_KIND_IS_BIN_OP(expr) ((expr)->kind & 1 == 1)
-#define EXPR_KIND_IS_RAW_OP(expr) ((expr)->kind & 2 == 2)
+#define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
+#define EXPR_KIND_IS_RAW_OP(expr) (((expr)->kind & 2) == 2)
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
