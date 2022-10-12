@@ -23,10 +23,10 @@ elseif (WIN32)
 endif ()
 
 set(SOURCES
-    src/main.c
+#    src/main.c
     src/string_t.c
-    src/hal/console.unix.c
-    src/hal/console.win.c
+#    src/hal/console.unix.c
+#    src/hal/console.win.c
     src/emfrp_parser.c
     src/ast.c
     src/vm/exec.c
@@ -34,23 +34,23 @@ set(SOURCES
     src/vm/node_t.c
     src/collections/list_t.c
     src/collections/dictionary_t.c
-    src/emfrp.c
+#    src/emfrp.c
 )
 
-add_executable(emfrp-repl ${SOURCES})
+add_executable(emfrp-repl ${SOURCES} src/hal/console.unix.c src/hal/console.win.c src/main.c)
+add_library(libemfrp-repl SHARED ${SOURCES} src/emfrp.c)
 
 if (UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
-    target_include_directories(emfrp-repl
+    include_directories(
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include
             /usr/local/include
     )
 elseif (WIN32)
     add_compile_definitions(EMFRP_EXPORTING=1)
-    target_include_directories(emfrp-repl
-        PRIVATE
-            ${PROJECT_SOURCE_DIR}/include
+    include_directories(
+       PRIVATE ${PROJECT_SOURCE_DIR}/include
     )
 endif ()
 

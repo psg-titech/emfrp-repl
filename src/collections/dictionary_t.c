@@ -2,7 +2,7 @@
  * @file   dictionary_t.c
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/12
  ------------------------------------------- */
 #include "collections/dictionary_t.h"
 
@@ -50,13 +50,11 @@ dictionary_add2(dictionary_t * out, void * value, size_t value_size, size_t(hash
 }
 
 bool dictionary_get(dictionary_t * self, void ** out,  size_t(hasher(void *)), bool(comparer(void *, void *)), void * search_value) {
-  em_result errres;
   size_t hashed = hasher(search_value) % DICTIONARY_TABLE_SIZE;
   return list_search(self->values[hashed], out, comparer, search_value);
 }
 
 bool dictionary_contains(dictionary_t * self, size_t(hasher(void *)), bool(comparer(void *, void *)), void * search_value) {
-  em_result errres;
   size_t hashed = hasher(search_value) % DICTIONARY_TABLE_SIZE;
   return list_contains(self->values[hashed], comparer, search_value);
 }

@@ -46,20 +46,50 @@ emfrp_repl(emfrp_t * self, char * str) {
     em_free(parsed_node);
   } else
     goto fail;
+  parser_destroy(ctx);
+  machine_debug_print_definitions(self->machine);
+  return false;
  fail:
   parser_destroy(ctx);
   return true;
 }
 
 EM_EXPORTDECL bool
-emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_callback callback) {
-  string_t s;
+emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_input_node_callback callback) {
+  string_t s, s_dup;
   string_new1(&s, node_name);
-  return machine_add_node_callback(self->machine, s, callback) != EM_RESULT_OK;
+  if(string_copy(&s_dup, &s) != EM_RESULT_OK) return true;
+  return machine_add_node_callback(self->machine, s_dup, callback) != EM_RESULT_OK;
 } 
-EM_EXPORTDECL bool emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value) {
+
+EM_EXPORTDECL bool
+emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value) {
+  string_t s;
+  em_result errres;
+  string_new1(&s, node_name);
+  CHKERR(machine_set_value_of_node(self->machine, &s, value));
+  CHKERR(machine_indicate(self->machine, &s, 1));
   return false;
+err:
+  return true;
 }
-EM_EXPORTDECL bool emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_callback callback) {
-  return false;
+
+EM_EXPORTDECL bool
+emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_output_node_callback callback) {
+  string_t s, s_dup;
+  string_new1(&s, node_name);
+  if (string_copy(&s_dup, &s) != EM_RESULT_OK) return true;
+  return machine_add_output_node(self->machine, s_dup, callback) != EM_RESULT_OK;
+}
+
+EM_EXPORTDECL em_object_t *
+emfrp_create_int_object(int32_t num) {
+  em_object_t * output = nullptr;
+  object_new_int(&output, num);
+  return output;
+}
+
+EM_EXPORTDECL int32_t
+emfrp_get_integer(em_object_t * v) {
+    return object_get_integer(v);
 }

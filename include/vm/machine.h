@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/12
  ------------------------------------------- */
 
 #pragma once
@@ -66,7 +66,16 @@ bool macihne_is_defined(machine_t * self, string_t * name);
  * \param name List of names of the changed node.(Nullable)
  * \return The status code
  */
-em_result machine_indicate(machine_t * self, string_t * names);
+em_result machine_indicate(machine_t * self, string_t * names, int count_names);
+
+// ! Set value of the node.
+/* !
+ * \param self The machine
+ * \param name Name of the node to be changed its value.
+ * \param val the object to be set.
+ */
+em_result machine_set_value_of_node(machine_t * self, string_t * name, object_t * val);
+
 
 // ! Register the output node
 /* !

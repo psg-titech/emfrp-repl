@@ -76,7 +76,8 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     // Search 
     list_t * pcur = self->execution_list.head;
     while(pcur != cur) {
-      if(check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
+      if(((node_t *)(pcur->value))->program_kind == NODE_PROGRAM_KIND_AST &&
+          check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
         errres = EM_RESULT_CYCLIC_REFERENCE;
         goto err;
       }
@@ -143,13 +144,19 @@ macihne_is_defined(machine_t * self, string_t * name) {
 }
 
 em_result
-machine_indicate(machine_t * self, string_t * names) {
+machine_indicate(machine_t * self, string_t * names, int count_names) {
   // names is currently ignored. i.e. All of nodes are executed.
   em_result errres;
   list_t * /*<node_t*>*/ cur = self->execution_list.head;
   while(!LIST_IS_EMPTY(&cur)) {
     node_t * v = (node_t *)cur->value;
-    CHKERR(exec_ast(self, v->program.ast, &(v->value)));
+    if (v->program_kind == NODE_PROGRAM_KIND_AST) {
+      CHKERR(exec_ast(self, v->program.ast, &(v->value)));
+    }
+    else if (v->program_kind == NODE_PROGRAM_KIND_CALLBACK)
+      v->value = v->program.callback();
+    if (v->action != nullptr)
+      v->action(v->value);
     cur = LIST_NEXT(cur);
   }
   return EM_RESULT_OK;
@@ -158,17 +165,32 @@ machine_indicate(machine_t * self, string_t * names) {
 }
 
 em_result
+machine_set_value_of_node(machine_t * self, string_t * name, object_t * val) {
+  node_t * o = nullptr;
+  if (!dictionary_get(&(self->nodes), (void **)&o, string_hasher, node_compare, name))
+      return EM_RESULT_MISSING_IDENTIFIER;
+  o->value = val;
+  return EM_RESULT_OK;
+}
+
+em_result
 machine_add_output_node(machine_t * self, string_t name, node_event_delegate_t callback) {
+  em_result errres;
   node_t * ptrToNode = nullptr;
-  if(dictionary_get(&(self->nodes), (void**)(&ptrToNode), node_hasher, node_compare, &name)) {
+  if(dictionary_get(&(self->nodes), (void**)(&ptrToNode), string_hasher, node_compare, &name)) {
     ptrToNode->action = callback;
     string_free(&name);
   } else {
     node_t new_node = { 0 };
+    node_t * ptr_to_node = nullptr;
     node_new_nothing(&new_node, name);
     new_node.action = callback;
+    CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void **)&ptr_to_node));
+    CHKERR(list_add2(&self->execution_list.head, node_t *, &ptr_to_node));
   }
   return EM_RESULT_OK;
+err:
+  return errres;
 }
 
 void

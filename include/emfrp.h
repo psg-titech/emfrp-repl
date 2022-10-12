@@ -5,6 +5,7 @@
  * @date   2022/10/12
  ------------------------------------------- */
 #pragma once
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef struct object_t em_object_t;
@@ -20,11 +21,14 @@ typedef struct object_t em_object_t;
 #  define EM_EXPORTDECL
 #endif
 
-typedef em_object_t* (*em_callback)(void);
+typedef em_object_t * (*em_input_node_callback)(void);
+typedef void (*em_output_node_callback)(em_object_t *);
 typedef struct emfrp_t emfrp_t;
 
 EM_EXPORTDECL emfrp_t * emfrp_create(void);
 EM_EXPORTDECL bool emfrp_repl(emfrp_t * self, char * str);
-EM_EXPORTDECL bool emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_callback callback);
+EM_EXPORTDECL bool emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_input_node_callback callback);
 EM_EXPORTDECL bool emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value);
-EM_EXPORTDECL bool emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_callback callback);
+EM_EXPORTDECL bool emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_output_node_callback callback);
+EM_EXPORTDECL em_object_t * emfrp_create_int_object(int32_t num);
+EM_EXPORTDECL int32_t emfrp_get_integer(em_object_t * v);
