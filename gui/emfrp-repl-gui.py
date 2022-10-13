@@ -20,6 +20,7 @@ elif os.name == 'posix':
         librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'libemfrp-repl.dylib')
         print('macOS\'s tkinter is very buggy, we recommend other OSes.')
     elif platform.system() in ['Linux', 'DragonFly', 'FreeBSD', 'Haiku', 'NetBSD', 'OpenBSD', 'Solaris']:
+        pass
     else:
         print('Not tested platform!')
 
