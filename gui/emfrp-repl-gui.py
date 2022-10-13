@@ -1,6 +1,12 @@
+
+# Title: Emfrp repl GUI frontend(Python/tk)
+# Author: Go Suzuki <puyogo.suzuki@gmail.com>
+# Date: 2022/10/13
+
 import tkinter
 import ctypes
 import os
+import platform
 
 librarypath = None
 
@@ -9,8 +15,12 @@ if os.name == 'nt' or os.name == 'ce':
     if not os.path.exists(librarypath):
         librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'Release', 'libemfrp-repl.dll')
 elif os.name == 'posix':
-    print('Not tested yet.')
-    exit(0)
+    if platform.system() == 'Darwin':
+        librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'libemfrp-repl.dylib')
+        print('macOS\'s tkinter is very buggy, we recommend other OSes.')
+    else:
+        print('Not tested yet.')
+        exit(0)
 
 libemfrp = ctypes.cdll.LoadLibrary(librarypath)
 libemfrp.emfrp_create.restype = ctypes.c_void_p

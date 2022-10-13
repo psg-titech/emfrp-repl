@@ -38,6 +38,7 @@ set(SOURCES
 )
 
 add_executable(emfrp-repl ${SOURCES} src/hal/console.unix.c src/hal/console.win.c src/main.c)
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
 add_library(libemfrp-repl SHARED ${SOURCES} src/emfrp.c)
 
 if (UNIX)
