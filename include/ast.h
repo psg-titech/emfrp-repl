@@ -170,13 +170,9 @@ parser_expression_free(parser_expression_t * expr);
 
 // ! Used for parser_expression_print.
 static char * binary_op_table[] = {
-  "",
   "+",
-  "",
   "-",
-  "",
   "/",
-  "",
   "*"
 };
 

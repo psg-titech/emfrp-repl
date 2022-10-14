@@ -42,7 +42,6 @@ emfrp_repl(emfrp_t * self, char * str) {
   if(!parser_parse(ctx, (void **)&parsed_node)) {
       parser_expression_print(parsed_node->expression);
     em_result res = machine_add_node_ast(self->machine, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
-    printf("error code: %d\n", res);
     if(res != EM_RESULT_OK)
       goto fail;
     if(parsed_node->init_expression != nullptr)

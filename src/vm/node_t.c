@@ -34,6 +34,7 @@ node_deep_free(node_t * v) {
   case NODE_PROGRAM_KIND_AST:
     parser_expression_free(v->program.ast);
     break;
+  default: break;
   }
   object_free(v->value);
 }

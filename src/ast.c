@@ -21,7 +21,7 @@ parser_expression_print(parser_expression_t * e) {
   if((e->kind & 1) == 1) {
     printf("(");
     parser_expression_print(e->value.binary.lhs);
-    printf(" %s ", binary_op_table[e->kind]);
+    printf(" %s ", binary_op_table[e->kind >> 2]);
     parser_expression_print(e->value.binary.rhs);
     printf(")");
   } else {

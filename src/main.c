@@ -29,12 +29,13 @@ int main(void) {
       parser_node_print(parsed_node);
       em_result res = machine_add_node_ast(&m, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
       if(res != EM_RESULT_OK) {
-	printf("add node failure: %d\n", res);
-	return 0;
+	printf("add node failure: %s\n", EM_RESULT_STR_TABLE[res]);
+	goto freeing;
       }
       res = exec_ast(&m, parsed_node->expression,  &result_object);
-      printf("%d, %d\n", res,
+      printf("%s, %d\n", EM_RESULT_STR_TABLE[res],
 	     object_get_integer(result_object));
+    freeing:
       machine_debug_print_definitions(&m);
       if(parsed_node->init_expression != nullptr)
 	parser_expression_free(parsed_node->init_expression);
