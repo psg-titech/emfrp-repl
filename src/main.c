@@ -36,7 +36,8 @@ int main(void) {
       printf("%d, %d\n", res,
 	     object_get_integer(result_object));
       machine_debug_print_definitions(&m);
-      parser_expression_free(parsed_node->init_expression);
+      if(parsed_node->init_expression != nullptr)
+	parser_expression_free(parsed_node->init_expression);
       em_free(parsed_node);
     }
     parser_destroy(ctx);

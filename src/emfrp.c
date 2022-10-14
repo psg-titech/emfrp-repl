@@ -43,7 +43,8 @@ emfrp_repl(emfrp_t * self, char * str) {
     em_result res = machine_add_node_ast(self->machine, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
     if(res != EM_RESULT_OK)
       goto fail;
-    parser_expression_free(parsed_node->init_expression);
+    if(parsed_node->init_expression != nullptr)
+      parser_expression_free(parsed_node->init_expression);
     em_free(parsed_node);
   } else
     goto fail;
