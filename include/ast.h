@@ -98,20 +98,29 @@ parser_node_new(string_t * node_name, parser_expression_t * expression, parser_e
   return ret;
 }
 
-// ! Constructor of addition expression.
+// ! Constructor of binary expression.
 /* !
  * \param lhs Left hand side. Not copied.
  * \param rhs Right hand side. Not copied.
+ * \param kind The binary expression kind, validated only in Debug mode.
  * \return Malloc-ed and constructed parser_expression_t
  */
 static inline parser_expression_t *
-parser_expression_new_addition(parser_expression_t * lhs, parser_expression_t * rhs) {
+parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rhs, parser_expression_kind_t kind) {
+#if DEBUG
+  if(kind & 1 == 0) DEBUGBREAK;
+#endif
   parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
-  ret->kind = EXPR_KIND_ADDITION;
+  ret->kind = kind;
   ret->value.binary.lhs = lhs;
   ret->value.binary.rhs = rhs;
   return ret;
 }
+
+#define parser_expression_new_addition(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_ADDITION)
+#define parser_expression_new_subtraction(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_SUBTRACTION)
+#define parser_expression_new_multiplication(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_MULTIPLICATION)
+#define parser_expression_new_division(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_DIVISION)
 
 // ! Constructor of integer literal expression.
 /* !
