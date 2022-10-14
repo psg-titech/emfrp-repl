@@ -40,7 +40,9 @@ emfrp_repl(emfrp_t * self, char * str) {
   parser_reader_new(&parser_reader, &line);
   parser_context_t * ctx = parser_create(&parser_reader);
   if(!parser_parse(ctx, (void **)&parsed_node)) {
+      parser_expression_print(parsed_node->expression);
     em_result res = machine_add_node_ast(self->machine, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
+    printf("error code: %d\n", res);
     if(res != EM_RESULT_OK)
       goto fail;
     if(parsed_node->init_expression != nullptr)
@@ -51,7 +53,7 @@ emfrp_repl(emfrp_t * self, char * str) {
   parser_destroy(ctx);
   machine_debug_print_definitions(self->machine);
   return false;
- fail:
+fail:
   parser_destroy(ctx);
   return true;
 }

@@ -59,8 +59,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     while(!LIST_IS_EMPTY(&cur)) {
       node_t * n = (node_t *)(cur->value);
       do {
-	if(string_compare(&(n->name), &str))
-	  goto missingerr;
         removed = list_remove(&dependencies, string_compare2, &(n->name));
         if(removed != nullptr) em_free(removed);
       } while(removed != nullptr);
@@ -98,10 +96,11 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   }
-  self->executing_node_name = &(ptr_to_new_node->name);
-  if(initialization != nullptr)
+  if (initialization != nullptr) {
+    self->executing_node_name = &(ptr_to_new_node->name);
     CHKERR(exec_ast(self, initialization, &(ptr_to_new_node->value)));
-  self->executing_node_name = nullptr;
+    self->executing_node_name = nullptr;
+  }
   return EM_RESULT_OK;
  err:
   if(new_node.name.buffer != nullptr)
