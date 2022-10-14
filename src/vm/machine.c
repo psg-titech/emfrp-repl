@@ -37,7 +37,7 @@ void
 node_cleaner(void * v) { node_deep_free((node_t *)v);}
 
 em_result
-machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog) {
+machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog, parser_expression_t * initialization) {
   em_result errres;
   node_t new_node = { 0 };
   node_t * ptr_to_new_node;
@@ -99,7 +99,8 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   }
   self->executing_node_name = &(ptr_to_new_node->name);
-  CHKERR(exec_ast(self, new_node.program.ast, &(ptr_to_new_node->value)));
+  if(initialization != nullptr)
+    CHKERR(exec_ast(self, initialization, &(ptr_to_new_node->value)));
   self->executing_node_name = nullptr;
   return EM_RESULT_OK;
  err:

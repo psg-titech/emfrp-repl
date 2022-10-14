@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/12
+ * @date   2022/10/14
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -40,9 +40,10 @@ emfrp_repl(emfrp_t * self, char * str) {
   parser_reader_new(&parser_reader, &line);
   parser_context_t * ctx = parser_create(&parser_reader);
   if(!parser_parse(ctx, (void **)&parsed_node)) {
-    em_result res = machine_add_node_ast(self->machine, parsed_node->name, parsed_node->expression);
+    em_result res = machine_add_node_ast(self->machine, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
     if(res != EM_RESULT_OK)
       goto fail;
+    parser_expression_free(parsed_node->init_expression);
     em_free(parsed_node);
   } else
     goto fail;

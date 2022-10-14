@@ -45,9 +45,10 @@ em_result machine_new(machine_t * out);
  * \param self The machine
  * \param str Name of the node
  * \param prog Program of the node
+ * \param initialization The initialization value, not freed, please free by the caller.
  * \return The status code
  */
-em_result machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog);
+em_result machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog, parser_expression_t * initialization);
 
 // ! Add a node(a input node).
 /* !

@@ -78,19 +78,23 @@ typedef struct parser_node_t {
   string_t name;
   // ! Expression of node.
   parser_expression_t * expression;
+  // ! `init` Expression
+  parser_expression_t * init_expression;
 } parser_node_t;
 
 // ! Constructor of parser_node_t.
 /* !
  * \param node_name Name of node. Not copied.
  * \param expression Expression of node. Not copied.
+ * \param init_expression `init` expression. Not copied.
  * \return Malloc-ed and constructed parser_node_t
  */
 static inline parser_node_t *
-parser_node_new(string_t * node_name, parser_expression_t * expression) {
+parser_node_new(string_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression) {
   parser_node_t * ret = (parser_node_t *)em_malloc(sizeof(parser_node_t));
   ret->name = *node_name;
   ret->expression = expression;
+  ret->init_expression = init_expression;
   return ret;
 }
 
