@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/12
+ * @date   2022/10/14
  ------------------------------------------- */
 
 #pragma once
@@ -13,9 +13,24 @@
 #include "vm/node_t.h"
 #include "vm/object_t.h"
 
+// ! Virtual Machine.
 typedef struct machine_t {
+  // ! The execution list with the order.
+  /* !
+   * Items are the pointer to the nodes' content.
+   * They references machine_t::nodes;
+   */
   queue_t /*<node_t*>*/ execution_list;
+  // ! The details of nodes.
+  /* !
+   * Items are the node(not pointer).
+   */
   dictionary_t /*<node_t>*/ nodes;
+  // ! The name of an executing node.
+  /* !
+   * If the machine is not currently executing any ndoes, it must be nullptr.
+   */
+  string_t * executing_node_name;
 } machine_t;
 
 // ! Constructor of machine_t.
@@ -60,7 +75,7 @@ bool machine_search_node(machine_t * self, object_t ** out, string_t * name);
  */
 bool macihne_is_defined(machine_t * self, string_t * name);
 
-// ! Indicate Changed
+// ! Indicate value of the node is changed
 /* !
  * \param self The machine
  * \param name List of names of the changed node.(Nullable)

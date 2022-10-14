@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/14
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -26,6 +26,7 @@ machine_new(machine_t * out) {
   em_result errres;
   CHKERR(queue_default(&(out->execution_list)));
   CHKERR(dictionary_new(&(out->nodes)));
+  out->executing_node_name = nullptr;
   return EM_RESULT_OK;
  err: return errres;
 }
@@ -41,7 +42,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
   node_t new_node = { 0 };
   node_t * ptr_to_new_node;
   CHKERR(node_new_ast(&new_node, str, prog));
-  CHKERR(exec_ast(self, prog, &new_node.value));
   node_t * out_val = nullptr;
   bool isDefined = dictionary_get(&(self->nodes), (void**)&out_val, string_hasher, node_compare, &str);
   if(out_val != nullptr)
@@ -59,6 +59,8 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     while(!LIST_IS_EMPTY(&cur)) {
       node_t * n = (node_t *)(cur->value);
       do {
+	if(string_compare(&(n->name), &str))
+	  goto missingerr;
         removed = list_remove(&dependencies, string_compare2, &(n->name));
         if(removed != nullptr) em_free(removed);
       } while(removed != nullptr);
@@ -68,6 +70,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     }
     // Also all dependencies are not satisfied.
     if(!LIST_IS_EMPTY(&dependencies)) {
+    missingerr:
       errres = EM_RESULT_MISSING_IDENTIFIER;
       list_free(&dependencies);
       goto err;
@@ -95,6 +98,9 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog)
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   }
+  self->executing_node_name = &(ptr_to_new_node->name);
+  CHKERR(exec_ast(self, new_node.program.ast, &(ptr_to_new_node->value)));
+  self->executing_node_name = nullptr;
   return EM_RESULT_OK;
  err:
   if(new_node.name.buffer != nullptr)
@@ -150,6 +156,7 @@ machine_indicate(machine_t * self, string_t * names, int count_names) {
   list_t * /*<node_t*>*/ cur = self->execution_list.head;
   while(!LIST_IS_EMPTY(&cur)) {
     node_t * v = (node_t *)cur->value;
+    self->executing_node_name = &(v->name);
     if (v->program_kind == NODE_PROGRAM_KIND_AST) {
       CHKERR(exec_ast(self, v->program.ast, &(v->value)));
     }
@@ -159,8 +166,10 @@ machine_indicate(machine_t * self, string_t * names, int count_names) {
       v->action(v->value);
     cur = LIST_NEXT(cur);
   }
+  self->executing_node_name = nullptr;
   return EM_RESULT_OK;
  err:
+  self->executing_node_name = nullptr;
   return errres;
 }
 

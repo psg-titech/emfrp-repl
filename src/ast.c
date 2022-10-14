@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/14
  ------------------------------------------- */
 
 #include "ast.h"
@@ -32,6 +32,8 @@ parser_expression_print(parser_expression_t * e) {
       printf("%d", e->value.integer); break;
     case EXPR_KIND_IDENTIFIER:
       printf("%s", e->value.identifier.buffer); break;
+    case EXPR_KIND_LAST_IDENTIFIER:
+      printf("%s@last", e->value.identifier.buffer); break;
     }
   }
 }
@@ -41,7 +43,7 @@ parser_expression_free(parser_expression_t * expr) {
   if(EXPR_KIND_IS_BIN_OP(expr)) {
     parser_expression_free(expr->value.binary.lhs);
     parser_expression_free(expr->value.binary.rhs);
-  } else if(expr->kind == EXPR_KIND_IDENTIFIER)
+  } else if(expr->kind == EXPR_KIND_IDENTIFIER || expr->kind == EXPR_KIND_LAST_IDENTIFIER)
     string_free(&(expr->value.identifier));
   free(expr);
 }

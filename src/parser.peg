@@ -62,8 +62,11 @@ primary <- <[1-9][0-9]*>             { $$ = parser_expression_new_integer(atoi($
          / <'0x'[0-9]+>              
          / <'0'[0-9]+>
          / '(' _ e:expression _ ')'    { $$ = e; }
+	 / ident:lastidentifier        { $$ = parser_expression_new_last_identifier(ident); em_free(ident); }
          / ident:identifier            { $$ = parser_expression_new_identifier(ident); em_free(ident); }
 
 _ <- [ \t]*
 EOL <- '\n' / '\r\n' / '\r' / ';' / !.
+lastidentifier <- <[a-zA-Z][a-zA-Z0-9_]*> '@last' { $$ = string_malloc_new($1	); }
 identifier <- [a-zA-Z][a-zA-Z0-9_]*  { $$ = string_malloc_new($0); }
+

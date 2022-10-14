@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/12
+ * @date   2022/10/14
  ------------------------------------------- */
 
 #pragma once
@@ -38,7 +38,9 @@ typedef enum parser_expression_kind_t : int32_t {
   // ! Floating literal
   EXPR_KIND_FLOATING = 6,
   // ! Identifier
-  EXPR_KIND_IDENTIFIER = 4
+  EXPR_KIND_IDENTIFIER = 4,
+  // ! Identifier @last
+  EXPR_KIND_LAST_IDENTIFIER = 8
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
@@ -65,7 +67,7 @@ typedef struct parser_expression_t {
     int32_t integer;
     // ! When kind is EXPR_KIND_FLOATING.
     float floating;
-    // ! When kind is EXPR_KIND_IDENTIFIER.
+    // ! When kind is EXPR_KIND_IDENTIFIER or EXPR_KIND_LAST_IDENTIFIER.
     string_t identifier;
   } value;
 } parser_expression_t;
@@ -129,6 +131,19 @@ static inline parser_expression_t *
 parser_expression_new_identifier(string_t * ident) {
   parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
   ret->kind = EXPR_KIND_IDENTIFIER;
+  ret->value.identifier = *ident;
+  return ret;
+}
+
+// ! Constructor of identifier expression(@last).
+/* !
+ * \param ident Identifier
+ * \return Malloc-ed and constructed parser_expression_t
+ */
+static inline parser_expression_t *
+parser_expression_new_last_identifier(string_t * ident) {
+  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  ret->kind = EXPR_KIND_LAST_IDENTIFIER;
   ret->value.identifier = *ident;
   return ret;
 }

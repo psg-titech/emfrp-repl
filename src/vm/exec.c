@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2022/10/14
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -47,6 +47,14 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       object_new_int(out, v->value.integer);
       break;
     case EXPR_KIND_IDENTIFIER:
+      if(m->executing_node_name != nullptr && string_compare(&(v->value.identifier), m->executing_node_name))
+	return EM_RESULT_CYCLIC_REFERENCE;
+      if(!machine_search_node(m, out, &(v->value.identifier)))
+	return EM_RESULT_MISSING_IDENTIFIER;
+      break;
+    case EXPR_KIND_LAST_IDENTIFIER:
+      if(m->executing_node_name != nullptr && !string_compare(&(v->value.identifier), m->executing_node_name))
+	return EM_RESULT_MISSING_IDENTIFIER;
       if(!machine_search_node(m, out, &(v->value.identifier)))
 	return EM_RESULT_MISSING_IDENTIFIER;
       break;
