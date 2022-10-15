@@ -21,26 +21,37 @@ This is the tested environment.
  * MacBook Air (M1, 2020)
 
 # How to build
-
-## macOS
-1. Execute `./setup-macos-brew.sh` as privilaged user.
-2. Execute the Makefile in `./packcc/build/clang`.
-3. `$ mkdir build && cd build && cmake ..`
-4. `$ make`
-5. `$ ./emfrp-repl`
-
-## FreeBSD/DragonFlyBSD
+## How to build for own devices
+### FreeBSD/DragonFlyBSD
 1. Execute `./setup-bsd.sh` as privilaged user.
 2. Execute the Makefile in `./packcc/build/clang` or `./packcc/build/gcc`.
-3. `$ cmake build`
-4. `$ cd build`
-5. `$ make`
-6. `$ ./emfrp-repl`
+3. Open `project/pc/`.
+4. `$ cmake build`
+5. `$ cd build`
+6. `$ make`
+7. `$ ./emfrp-repl`
 
-## Windows
+### Windows
 0. Install Visual Studio 2019 or newer(with C++ Desktop Development workload) and CMake.
-1. Open `./packcc/build/msvc/msvc.sln`.
+1. Open `packcc/build/msvc/msvc.sln`.
 2. Build the project packcc with the configuration `Release` and `x64`.
+3. Open `project/pc/`.
 3. `> cmake -B build`.
-4. Open `./build/emfrp-repl.sln`.
+4. Open `project/pc/build/emfrp-repl.sln`.
 5. Build and debug!
+
+### macOS
+1. Execute `project/common/setup-macos-brew.sh` as privilaged user.
+2. Execute the Makefile in `packcc/build/clang`.
+3. Open `project/pc/`.
+4. `$ mkdir build`
+5. `$ cd build`
+6. `$ cmake ..`
+7. `$ make`
+8. `$ ./emfrp-repl`
+
+### GUI Emfrp-REPL
+We recommend not to use on macOS.  
+You had better to use Linux, or Windows on virtual machines if you use macOS.  
+
+1. Execute `gui/emfrp-repl-gui.py` by Python 3.x.

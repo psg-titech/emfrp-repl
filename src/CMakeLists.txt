@@ -1,0 +1,13 @@
+function(set_source prefix)
+    set(SOURCES
+        ${prefix}/src/string_t.c
+        ${prefix}/src/emfrp_parser.c
+        ${prefix}/src/ast.c
+        ${prefix}/src/vm/exec.c
+        ${prefix}/src/vm/machine.c
+        ${prefix}/src/vm/node_t.c
+        ${prefix}/src/collections/list_t.c
+        ${prefix}/src/collections/dictionary_t.c
+        PARENT_SCOPE
+    )
+endfunction()

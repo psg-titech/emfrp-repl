@@ -3,7 +3,6 @@
 *#
 
 # CMake Directory
-/build
 /out
 
 # Visual Studio Directory

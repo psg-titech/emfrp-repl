@@ -1,7 +1,7 @@
 
 # Title: Emfrp repl GUI frontend(Python/tk)
 # Author: Go Suzuki <puyogo.suzuki@gmail.com>
-# Date: 2022/10/13
+# Date: 2022/10/15
 
 import tkinter
 import ctypes
@@ -11,13 +11,13 @@ import platform
 librarypath = None
 
 if os.name == 'nt' or os.name == 'ce':
-    librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'Debug', 'libemfrp-repl.dll')
+    librarypath = os.path.join(os.path.dirname(__file__), '..', 'project', 'pc', 'build', 'Debug', 'libemfrp-repl.dll')
     if not os.path.exists(librarypath):
-        librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'Release', 'libemfrp-repl.dll')
+        librarypath = os.path.join(os.path.dirname(__file__), '..', 'project', 'pc', 'build', 'Release', 'libemfrp-repl.dll')
 elif os.name == 'posix':
-    librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'libemfrp-repl.so')
+    librarypath = os.path.join(os.path.dirname(__file__), '..', 'project', 'pc', 'build', 'libemfrp-repl.so')
     if platform.system() == 'Darwin':
-        librarypath = os.path.join(os.path.dirname(__file__), '..', 'build', 'libemfrp-repl.dylib')
+        librarypath = os.path.join(os.path.dirname(__file__), '..', 'project', 'pc', 'build', 'libemfrp-repl.dylib')
         print('macOS\'s tkinter is very buggy, we recommend other OSes.')
     elif platform.system() in ['Linux', 'DragonFly', 'FreeBSD', 'Haiku', 'NetBSD', 'OpenBSD', 'Solaris']:
         pass
