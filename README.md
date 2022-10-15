@@ -23,7 +23,7 @@ This is the tested environment.
 # How to build
 ## How to build for own devices
 ### FreeBSD/DragonFlyBSD
-1. Execute `./setup-bsd.sh` as privilaged user.
+1. Execute `project/common/setup-bsd.sh` as privilaged user.
 2. Execute the Makefile in `./packcc/build/clang` or `./packcc/build/gcc`.
 3. Open `project/pc/`.
 4. `$ cmake build`
