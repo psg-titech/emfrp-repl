@@ -1,4 +1,4 @@
-#if defined(unix) || defined(__APPLE__)
+#if defined(unix) || defined(__APPLE__) || defined(__HAIKU__)
 #include "hal/console.h"
 #include "string_t.h"
 #include <editline/readline.h>

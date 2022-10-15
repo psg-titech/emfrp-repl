@@ -14,6 +14,12 @@ This is the tested environment.
  * DragonFly 6.2.2
  * gcc 8.3
 
+## HaikuOS
+This is the tested environment.
+
+ * Haiku R1/beta hrev55181+67
+ * gcc 11.2
+
 ## macOS
 This is the tested environment.
 
@@ -26,7 +32,7 @@ This is the tested environment.
 1. Execute `project/common/setup-bsd.sh` as privilaged user.
 2. Execute the Makefile in `./packcc/build/clang` or `./packcc/build/gcc`.
 3. Open `project/pc/`.
-4. `$ cmake build`
+4. `$ cmake -B build`
 5. `$ cd build`
 6. `$ make`
 7. `$ ./emfrp-repl`
@@ -39,6 +45,15 @@ This is the tested environment.
 3. `> cmake -B build`.
 4. Open `project/pc/build/emfrp-repl.sln`.
 5. Build and debug!
+
+### Haiku OS
+1. Execute `project/common/setup-haiku.sh`.
+2. Execute the Makefile in `./packcc/build/gcc`.
+3. Open `project/pc/`.
+4. `$ cmake -B build`
+5. `$ cd build`
+6. `$ make`
+7. `$ ./emfrp-repl`
 
 ### macOS
 1. Execute `project/common/setup-macos-brew.sh` as privilaged user.
