@@ -52,6 +52,6 @@ This is the tested environment.
 
 ### GUI Emfrp-REPL
 We recommend not to use on macOS.  
-You had better to use Linux, or Windows on virtual machines if you use macOS.  
+You had better use Linux, or Windows on virtual machines if you use macOS.  
 
 1. Execute `gui/emfrp-repl-gui.py` by Python 3.x.
