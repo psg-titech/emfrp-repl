@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/16
  ------------------------------------------- */
 
 #pragma once
@@ -169,7 +169,7 @@ void
 parser_expression_free(parser_expression_t * expr);
 
 // ! Used for parser_expression_print.
-static char * binary_op_table[] = {
+static const char * binary_op_table[] = {
   "+",
   "-",
   "/",

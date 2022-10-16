@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/16
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -23,6 +23,7 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
     case EXPR_KIND_SUBTRACTION: retVal = ll - rr; break;
     case EXPR_KIND_DIVISION: retVal = ll / rr; break;
     case EXPR_KIND_MULTIPLICATION: retVal = ll * rr; break;
+    default: DEBUGBREAK; break;
     }
     object_new_int(out, retVal);
     return EM_RESULT_OK;

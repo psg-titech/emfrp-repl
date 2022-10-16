@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/16
  ------------------------------------------- */
 
 #include "ast.h"
@@ -34,6 +34,7 @@ parser_expression_print(parser_expression_t * e) {
       printf("%s", e->value.identifier.buffer); break;
     case EXPR_KIND_LAST_IDENTIFIER:
       printf("%s@last", e->value.identifier.buffer); break;
+    default: DEBUGBREAK; break;
     }
   }
 }

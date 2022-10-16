@@ -21,6 +21,10 @@ parser_reader_getchar(parser_reader_t * reader);
 %source {
 #include "ast.h"
 #include "misc.h"
+#if defined(__ESP_IDF__)
+#define PCC_POOL_MIN_SIZE 512
+#define PCC_BUFFER_MIN_SIZE 32
+#endif
 #define PCC_ERROR(auxil) fprintf(stderr, "ERROR")
 #define PCC_GETCHAR(auxil) parser_reader_getchar(auxil)
 #define PCC_MALLOC(auxil, size) em_malloc(size)

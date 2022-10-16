@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/16
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -68,7 +68,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     }
     // Also all dependencies are not satisfied.
     if(!LIST_IS_EMPTY(&dependencies)) {
-    missingerr:
       errres = EM_RESULT_MISSING_IDENTIFIER;
       list_free(&dependencies);
       goto err;

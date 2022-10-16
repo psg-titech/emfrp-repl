@@ -10,12 +10,14 @@ This is the tested environment.
 
 ## DragonFly
 This is the tested environment.
+Cannot compile for ESP32.
 
  * DragonFly 6.2.2
  * gcc 8.3
 
 ## HaikuOS
 This is the tested environment.
+Cannot compile for ESP32.
 
  * Haiku R1/beta hrev55181+67
  * gcc 11.2
@@ -70,3 +72,13 @@ We recommend not to use on macOS.
 You had better use Linux, or Windows on virtual machines if you use macOS.  
 
 1. Execute `gui/emfrp-repl-gui.py` by Python 3.x.
+
+## Compilation for ESP32
+You need esp-idf SDK. available on: https://github.com/espressif/esp-idf  
+
+1. Execute `install.ps1`, or `install.sh` in the esp-idf repository.
+2. Execute `export.ps1`, or `export.ps1` in the esp-idf repository.
+3. Execute `project/esp-idf/gen_parser.bat`, or `project/esp-idf/gen_parser.sh`. You need to execute these files if you rewrite `parser.peg`. This comes from esp-idf CMake Project System's limitations.
+4. Open `project/esp-idf`
+6. Execute `idf.py set-target esp32` in your first time.
+5. Execute `idf.py build` and flash `idf.py flash -p <PORT>`, and then monitor by `idf.py monitr -p <PORT>`.
