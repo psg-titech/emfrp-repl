@@ -1,5 +1,6 @@
 function(set_source prefix)
     set(SOURCES
+	${prefix}/src/em_result.c
         ${prefix}/src/string_t.c
         ${prefix}/src/emfrp_parser.c
         ${prefix}/src/ast.c

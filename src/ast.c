@@ -9,6 +9,14 @@
 #include "string_t.h"
 #include <stdio.h>
 
+const char * binary_op_table[] = {
+  "+",
+  "-",
+  "/",
+  "*"
+};
+
+
 void
 parser_node_print(parser_node_t * n) {
   printf("node %s = ", n->name.buffer);

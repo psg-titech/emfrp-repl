@@ -2,7 +2,7 @@
  * @file   em_result.h
  * @brief  Status Code
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/18
  ------------------------------------------- */
 #pragma once
 
@@ -30,24 +30,4 @@ typedef enum em_result_t {
   EM_RESULT_CYCLIC_REFERENCE = 18
 } em_result;
 
-static const char * EM_RESULT_STR_TABLE[] = {
-  "Ok",
-  "Unknwon Error",
-  "Out of Memory",
-  "Out of Index",
-  "Invalid Argument",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "Type Mismatch",
-  "Missing Identifier",
-  "Cyclic Referencing",
-};
+extern const char * EM_RESULT_STR_TABLE[];

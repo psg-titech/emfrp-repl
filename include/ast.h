@@ -169,12 +169,7 @@ void
 parser_expression_free(parser_expression_t * expr);
 
 // ! Used for parser_expression_print.
-static const char * binary_op_table[] = {
-  "+",
-  "-",
-  "/",
-  "*"
-};
+extern const char * binary_op_table[];
 
 // ! Print parser_node_t to stdout.
 /* !
