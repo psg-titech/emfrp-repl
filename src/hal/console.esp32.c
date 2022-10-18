@@ -1,3 +1,9 @@
+/** -------------------------------------------
+ * @file   console.esp32.c
+ * @brief  Emfrp-repl Entry Point
+ * @author Go Suzuki <puyogo.suzuki@gmail.com>
+ * @date   2022/10/18
+ ------------------------------------------- */
 #if defined(__ESP_IDF__)
 #include "hal/console.h"
 #include "string_t.h"
@@ -17,6 +23,7 @@ static char emfrp_console_buf[4096];
 #define buf emfrp_console_buf
 void
 initialize_console(void) {
+  fclose(stdin);
   uart_config_t uart_config = {
     .baud_rate = 115200,
     .data_bits = UART_DATA_8_BITS,
