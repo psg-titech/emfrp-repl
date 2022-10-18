@@ -2,7 +2,7 @@
  * @file   list_t.h
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/18
  ------------------------------------------- */
 #pragma once
 #include "emmem.h"
@@ -136,3 +136,13 @@ em_result queue_enqueue(queue_t * out, size_t value_size, void * value);
  */
 em_result queue_dequeue(queue_t * self, size_t value_size, void * out);
 #define queue_dequeue2(self, ty, out) queue_dequeue(self, sizeof(ty), out)
+
+// ! Add to the head of the queue.
+/* !
+ * /param self The queue to dequeue from
+ * /param value_size sizeof(value)
+ * /param out The result
+ * /return The status code
+ */
+em_result queue_add_head(queue_t * out, size_t value_size, void * value);
+#define queue_add_head2(self, ty, out) queue_add_head(self, sizeof(ty), out)

@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/16
+ * @date   2022/10/18
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -125,7 +125,7 @@ machine_add_node_callback(machine_t * self, string_t str, node_callback_t callba
   if(isDefined) {
     list_remove(&(self->execution_list.head), string_compare2, &str);
   }
-  CHKERR(list_add2(&self->execution_list.head, node_t *, &ptr_to_node));
+  CHKERR(queue_add_head2(&(self->execution_list), node_t *, &ptr_to_node));
   return EM_RESULT_OK;
  err:
   if(new_node.name.buffer != nullptr)

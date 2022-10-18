@@ -2,7 +2,7 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/10/18
  ------------------------------------------- */
 #include "collections/list_t.h"
 
@@ -111,5 +111,15 @@ queue_dequeue(queue_t * self, size_t value_size, void * out) {
   memcpy(out, &(v->value), value_size);
   em_free(v);
   return EM_RESULT_OK;
-}	     
+}
 
+em_result
+queue_add_head(queue_t * out, size_t value_size, void * value) {
+  em_result errres;
+  CHKERR(list_add(&(out->head), value_size, value));
+  if (out->last == &(out->head))
+    out->last = &(out->head->next);
+  return EM_RESULT_OK;
+err:
+  return errres;
+}
