@@ -1,3 +1,9 @@
+/** -------------------------------------------
+ * @file   emfrp.c
+ * @brief  Console Implementation for Windows
+ * @author Go Suzuki <puyogo.suzuki@gmail.com>
+ * @date   2022/10/19
+ ------------------------------------------- */
 #if defined(_WIN32)
 #include "hal/console.h"
 #include "string_t.h"
@@ -12,8 +18,8 @@ initialize_console(void) {
     console_input = GetStdHandle(STD_INPUT_HANDLE);
 }
 
-const DWORD START_SIZE = 256;
-const DWORD ADD_SIZE = 128;
+const DWORD START_SIZE = 64;
+const DWORD ADD_SIZE = 64;
 
 em_result
 read_line(string_t * recycle_buffer) {
@@ -32,17 +38,19 @@ read_line(string_t * recycle_buffer) {
     char_t * buf = recycle_buffer->buffer;
     while (1) {
         DWORD readChars;
-        if (ReadConsole(console_input, buf, toRead, &readChars, NULL) == 0)
+        if (ReadConsole(console_input, &buf[readed], toRead, &readChars, NULL) == 0)
             return EM_RESULT_UNKNOWN_ERR;
+        bool hasNewLine = false;
+        for (int i = readed; i < readChars + readed; ++i)
+            hasNewLine |= buf[i] == '\r';
         readed += readChars;
-        if (toRead == readChars) {
-            char_t * newBuf = em_reallocarray(recycle_buffer->buffer, sizeof(char_t), recycle_buffer->length + ADD_SIZE);
-            if (newBuf == nullptr)
-                return EM_RESULT_OUT_OF_MEMORY;
-            buf = recycle_buffer->buffer + recycle_buffer->length;
-            recycle_buffer->length += ADD_SIZE;
-            toRead = ADD_SIZE;
-        } else break;
+        if (hasNewLine) break;
+        char_t * newBuf = em_reallocarray(recycle_buffer->buffer, sizeof(char_t), recycle_buffer->length + ADD_SIZE);
+        if (newBuf == nullptr)
+            return EM_RESULT_OUT_OF_MEMORY;
+        buf = recycle_buffer->buffer + recycle_buffer->length;
+        recycle_buffer->length += ADD_SIZE;
+        toRead = ADD_SIZE;
     }
     recycle_buffer->buffer = em_reallocarray(recycle_buffer->buffer, sizeof(char_t), readed + 1);
     recycle_buffer->length = readed;

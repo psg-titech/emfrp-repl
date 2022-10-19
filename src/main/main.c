@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/10/19
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -21,6 +21,7 @@ int main(void) {
   initialize_console();
   machine_new(&m);
   while(true) {
+    string_null(&line);
     read_line(&line);
     if(line.length == 0) continue;
     parser_reader_new(&parser_reader, &line);
@@ -34,10 +35,10 @@ int main(void) {
       }
       res = exec_ast(&m, parsed_node->expression,  &result_object);
       // We have to think parsed_node->name is freed or not.
-      if(parsed_node->init_expression != nullptr)
-	machine_set_value_of_node(&m, &(parsed_node->name), result_object);
+      if (parsed_node->init_expression == nullptr)
+        machine_set_value_of_node(&m, &(parsed_node->name), result_object);
       else
-	object_free(result_object);
+        object_free(result_object);
       printf("%s, %d\n", EM_RESULT_STR_TABLE[res],
 	     object_get_integer(result_object));
     freeing:

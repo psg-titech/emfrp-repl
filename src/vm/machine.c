@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/18
+ * @date   2022/10/19
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -48,7 +48,11 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     new_node.action = out_val->action;
 
   if(isDefined) {
+    em_result reason;
     list_t * /*<string_t *>*/ dependencies;
+    list_t * /*<node_t *> */ revert = list_remove(&(self->execution_list.head), string_compare2, &str);
+    if (&revert->next == self->execution_list.last)
+        self->execution_list.last = &self->execution_list.head;
     list_t * /*<node_t *>*/ cur = self->execution_list.head;
     list_t ** /*<node_t *>*/ delay = &self->execution_list.head;
     list_t * /*<string_t *>*/ removed = nullptr;
@@ -56,7 +60,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     CHKERR(get_dependencies_ast(prog, &dependencies));
     // Search where to insert.
     // Inserted after all dependencies are satisfied.
-    while(!LIST_IS_EMPTY(&cur)) {
+    while(!LIST_IS_EMPTY(&dependencies) && !LIST_IS_EMPTY(&cur)) {
       node_t * n = (node_t *)(cur->value);
       do {
         removed = list_remove(&dependencies, string_compare2, &(n->name));
@@ -70,7 +74,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     if(!LIST_IS_EMPTY(&dependencies)) {
       errres = EM_RESULT_MISSING_IDENTIFIER;
       list_free(&dependencies);
-      goto err;
+      goto err2;
     }
     // CHECK CYCLIC DEPENDENCIES!
     // Search 
@@ -79,22 +83,57 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
       if(((node_t *)(pcur->value))->program_kind == NODE_PROGRAM_KIND_AST &&
           check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
         errres = EM_RESULT_CYCLIC_REFERENCE;
-        goto err;
+        goto err2;
       }
       pcur = pcur->next;
     }
-    /* list_t <node_t *> * */ removed = list_remove(&(self->execution_list.head), string_compare2, &str);
-    em_free(removed);
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(list_add2(delay, node_t *, &ptr_to_new_node));
-    if(LIST_IS_EMPTY(&((*delay)->next))) {
+    if(LIST_IS_EMPTY(&((*delay)->next)))
       self->execution_list.last = &((*delay)->next);
+    em_free(revert);
+    goto end;
+err2: // REVERTING
+    reason = errres;
+    CHKERR(list_default(&dependencies));
+    if (out_val->program_kind == NODE_PROGRAM_KIND_AST) {
+      cur = self->execution_list.head;
+      delay = &self->execution_list.head;
+      CHKERR(get_dependencies_ast(out_val->program.ast, &dependencies));
+      // Search where to insert.
+      // Inserted after all dependencies are satisfied.
+      while (!LIST_IS_EMPTY(&dependencies) && !LIST_IS_EMPTY(&cur)) {
+          node_t * n = (node_t *)(cur->value);
+          do {
+            removed = list_remove(&dependencies, string_compare2, &(n->name));
+            if (removed != nullptr) em_free(removed);
+          } while (removed != nullptr);
+          delay = &((*delay)->next);
+          cur = LIST_NEXT(cur);
+          if (LIST_IS_EMPTY(&dependencies)) break;  // All dependencies are satisfied.
+      }
+      // Also all dependencies are not satisfied.
+      if (!LIST_IS_EMPTY(&dependencies)) {
+        errres = EM_RESULT_MISSING_IDENTIFIER;
+        list_free(&dependencies);
+        em_free(removed);
+        goto err;
+      }
+      // Cyclic Reference Checking is skipped.
     }
+    else
+      delay = &(self->execution_list.head);
+    CHKERR(list_add2(delay, node_t *, &out_val));
+    if (LIST_IS_EMPTY(&((*delay)->next))) 
+        self->execution_list.last = &((*delay)->next);
+    errres = reason;
+    goto err;
   }
   else {
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   }
+  end:
   if (initialization != nullptr) {
     self->executing_node_name = &(ptr_to_new_node->name);
     CHKERR(exec_ast(self, initialization, &(ptr_to_new_node->value)));
@@ -194,7 +233,7 @@ machine_add_output_node(machine_t * self, string_t name, node_event_delegate_t c
     node_new_nothing(&new_node, name);
     new_node.action = callback;
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void **)&ptr_to_node));
-    CHKERR(list_add2(&self->execution_list.head, node_t *, &ptr_to_node));
+    CHKERR(queue_add_head2(&self->execution_list, node_t *, &ptr_to_node));
   }
   return EM_RESULT_OK;
 err:
