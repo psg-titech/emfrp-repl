@@ -9,7 +9,7 @@
 #include "string_t.h"
 #include <stdio.h>
 
-const char * binary_op_table[] = {
+const char * const binary_op_table[] = {
   "+",
   "-",
   "/",

@@ -30,4 +30,4 @@ typedef enum em_result_t {
   EM_RESULT_CYCLIC_REFERENCE = 18
 } em_result;
 
-extern const char * EM_RESULT_STR_TABLE[];
+extern const char * const EM_RESULT_STR_TABLE[];

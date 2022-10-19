@@ -5,7 +5,7 @@
  * @date   2022/10/18
  ------------------------------------------- */
 
-const char * EM_RESULT_STR_TABLE[] = {
+const char * const EM_RESULT_STR_TABLE[] = {
   "Ok",
   "Unknwon Error",
   "Out of Memory",
