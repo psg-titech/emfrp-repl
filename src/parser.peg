@@ -75,4 +75,3 @@ _ <- [ \t]*
 EOL <- '\n' / '\r\n' / '\r' / ';' / !.
 lastidentifier <- <[a-zA-Z][a-zA-Z0-9_]*> '@last' { $$ = string_malloc_new($1	); }
 identifier <- [a-zA-Z][a-zA-Z0-9_]*  { $$ = string_malloc_new($0); }
-

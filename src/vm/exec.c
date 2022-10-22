@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/16
+ * @date   2022/10/22
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -40,24 +40,23 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
-  if(EXPR_KIND_IS_BIN_OP(v)) {
+  if (EXPR_KIND_IS_INTEGER(v)) {
+    object_new_int(out, (int32_t)((size_t)v >> 1));
+  } else if (EXPR_KIND_IS_BIN_OP(v)) {
     CHKERR(exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out));
   } else {
     switch(v->kind) {
-    case EXPR_KIND_INTEGER:
-      object_new_int(out, v->value.integer);
-      break;
     case EXPR_KIND_IDENTIFIER:
       if(m->executing_node_name != nullptr && string_compare(&(v->value.identifier), m->executing_node_name))
-	return EM_RESULT_CYCLIC_REFERENCE;
+	    return EM_RESULT_CYCLIC_REFERENCE;
       if(!machine_search_node(m, out, &(v->value.identifier)))
-	return EM_RESULT_MISSING_IDENTIFIER;
+	    return EM_RESULT_MISSING_IDENTIFIER;
       break;
     case EXPR_KIND_LAST_IDENTIFIER:
       if(m->executing_node_name != nullptr && !string_compare(&(v->value.identifier), m->executing_node_name))
-	return EM_RESULT_MISSING_IDENTIFIER;
+	    return EM_RESULT_MISSING_IDENTIFIER;
       if(!machine_search_node(m, out, &(v->value.identifier)))
-	return EM_RESULT_MISSING_IDENTIFIER;
+	    return EM_RESULT_MISSING_IDENTIFIER;
       break;
     default:
       return EM_RESULT_INVALID_ARGUMENT;

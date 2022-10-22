@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/16
+ * @date   2022/10/22
  ------------------------------------------- */
 
 #pragma once
@@ -22,7 +22,6 @@ typedef enum parser_expression_kind_t {
 typedef enum parser_expression_kind_t : int32_t {
 #endif
   // & 1 == 1 => BINARY EXPRESSION.
-  // & 2 == 2 => RAW VALUE.
   // ! Null(Illegal)
   EXPR_KIND_NULL = 0,
   // ! Addition(a + b)
@@ -33,8 +32,6 @@ typedef enum parser_expression_kind_t : int32_t {
   EXPR_KIND_DIVISION = 9,
   // ! Multiplication(a * b)
   EXPR_KIND_MULTIPLICATION = 13,
-  // ! Integer literal
-  EXPR_KIND_INTEGER = 2,
   // ! Floating literal
   EXPR_KIND_FLOATING = 6,
   // ! Identifier
@@ -44,7 +41,7 @@ typedef enum parser_expression_kind_t : int32_t {
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
-#define EXPR_KIND_IS_RAW_OP(expr) (((expr)->kind & 2) == 2)
+#define EXPR_KIND_IS_INTEGER(expr) (((size_t)(expr) & 0x1) == 1)
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
@@ -63,8 +60,6 @@ typedef struct parser_expression_t {
       // ! Primary Expression
       struct parser_expression_t * exp;
     } unary;
-    // ! When kind is EXPR_KIND_INTEGER.
-    int32_t integer;
     // ! When kind is EXPR_KIND_FLOATING.
     float floating;
     // ! When kind is EXPR_KIND_IDENTIFIER or EXPR_KIND_LAST_IDENTIFIER.
@@ -129,10 +124,7 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
  */
 static inline parser_expression_t *
 parser_expression_new_integer(int32_t num) {
-  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
-  ret->kind = EXPR_KIND_INTEGER;
-  ret->value.integer = num;
-  return ret;
+  return (parser_expression_t *)((num << 1) | 0x1);
 }
 
 // ! Constructor of indentifier expression.
