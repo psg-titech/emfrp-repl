@@ -40,23 +40,34 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
-  if (EXPR_KIND_IS_INTEGER(v)) {
+  if (EXPR_KIND_IS_INTEGER(v))
     object_new_int(out, (int32_t)((size_t)v >> 1));
+  else if (EXPR_KIND_IS_BOOLEAN(v)) {
+    *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
   } else if (EXPR_KIND_IS_BIN_OP(v)) {
     CHKERR(exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out));
   } else {
     switch(v->kind) {
+    case EXPR_KIND_IF: {
+      object_t * cond_result = nullptr;
+      bool cond_v;
+      CHKERR(exec_ast(m, v->value.ifthenelse.cond, &cond_result));
+      cond_v = cond_result == &object_true;
+      object_free(cond_result);
+      CHKERR(exec_ast(m, cond_v ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
+      break;
+    }
     case EXPR_KIND_IDENTIFIER:
       if(m->executing_node_name != nullptr && string_compare(&(v->value.identifier), m->executing_node_name))
-	    return EM_RESULT_CYCLIC_REFERENCE;
+        return EM_RESULT_CYCLIC_REFERENCE;
       if(!machine_search_node(m, out, &(v->value.identifier)))
-	    return EM_RESULT_MISSING_IDENTIFIER;
+        return EM_RESULT_MISSING_IDENTIFIER;
       break;
     case EXPR_KIND_LAST_IDENTIFIER:
       if(m->executing_node_name != nullptr && !string_compare(&(v->value.identifier), m->executing_node_name))
-	    return EM_RESULT_MISSING_IDENTIFIER;
+        return EM_RESULT_MISSING_IDENTIFIER;
       if(!machine_search_node(m, out, &(v->value.identifier)))
-	    return EM_RESULT_MISSING_IDENTIFIER;
+        return EM_RESULT_MISSING_IDENTIFIER;
       break;
     default:
       return EM_RESULT_INVALID_ARGUMENT;
@@ -70,6 +81,7 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
 em_result
 get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
   em_result errres;
+  if(EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return EM_RESULT_OK;
   if(v->kind == EXPR_KIND_IDENTIFIER) {
     string_t * s = &(v->value.identifier);
     CHKERR(list_add2(out, string_t *, &s));
@@ -84,6 +96,7 @@ get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
 
 bool
 check_depends_on_ast(parser_expression_t * v, string_t * str) {
+  if (EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return false;
   if(v->kind == EXPR_KIND_IDENTIFIER)
     return string_compare(&(v->value.identifier), str);
   else if(EXPR_KIND_IS_BIN_OP(v))

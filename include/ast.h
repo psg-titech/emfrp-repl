@@ -37,11 +37,19 @@ typedef enum parser_expression_kind_t : int32_t {
   // ! Identifier
   EXPR_KIND_IDENTIFIER = 4,
   // ! Identifier @last
-  EXPR_KIND_LAST_IDENTIFIER = 8
+  EXPR_KIND_LAST_IDENTIFIER = 8,
+  // ! If expression
+  EXPR_KIND_IF = 12
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
 #define EXPR_KIND_IS_INTEGER(expr) (((size_t)(expr) & 0x1) == 1)
+#define EXPR_KIND_IS_BOOLEAN(expr) ((((size_t)(expr)) & ~0x6) == 0)
+#define EXPR_IS_TRUE(expr) ((size_t)(expr) == 0x2)
+#define EXPR_IS_FALSE(expr) ((size_t)(expr) == 0x6)
+
+#define parser_expression_true() (parser_expression_t *)0x2;
+#define parser_expression_false() (parser_expression_t *)0x6;
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
@@ -60,6 +68,15 @@ typedef struct parser_expression_t {
       // ! Primary Expression
       struct parser_expression_t * exp;
     } unary;
+    // ! When kind is EXPR_KIND_IF.
+    struct {
+      // Condition
+      struct parser_expression_t * cond;
+      // Then
+      struct parser_expression_t * then;
+      // Else
+      struct parser_expression_t * otherwise;
+    } ifthenelse;
     // ! When kind is EXPR_KIND_FLOATING.
     float floating;
     // ! When kind is EXPR_KIND_IDENTIFIER or EXPR_KIND_LAST_IDENTIFIER.
@@ -117,6 +134,16 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
 #define parser_expression_new_multiplication(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_MULTIPLICATION)
 #define parser_expression_new_division(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_DIVISION)
 
+static inline parser_expression_t *
+parser_expression_new_if(parser_expression_t * cond, parser_expression_t * then, parser_expression_t * otherwise) {
+  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  ret->kind = EXPR_KIND_IF;
+  ret->value.ifthenelse.cond = cond;
+  ret->value.ifthenelse.then = then;
+  ret->value.ifthenelse.otherwise = otherwise;
+  return ret;
+}
+
 // ! Constructor of integer literal expression.
 /* !
  * \param num Value
@@ -124,7 +151,7 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
  */
 static inline parser_expression_t *
 parser_expression_new_integer(int32_t num) {
-  return (parser_expression_t *)((num << 1) | 0x1);
+  return (parser_expression_t *)(size_t)((num << 1) | 0x1);
 }
 
 // ! Constructor of indentifier expression.

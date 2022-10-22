@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/19
+ * @date   2022/10/22
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -39,8 +39,13 @@ int main(void) {
         machine_set_value_of_node(&m, &(parsed_node->name), result_object);
       else
         object_free(result_object);
-      printf("%s, %d\n", EM_RESULT_STR_TABLE[res],
-	     object_get_integer(result_object));
+      if(res != EM_RESULT_OK)
+	printf("%s\n", EM_RESULT_STR_TABLE[res]);
+      else {
+	printf("OK, ");
+	object_print(result_object);
+	printf("\n");
+      }
     freeing:
       machine_debug_print_definitions(&m);
       if(parsed_node->init_expression != nullptr)

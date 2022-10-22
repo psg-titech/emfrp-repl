@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/12
+ * @date   2022/10/22
  ------------------------------------------- */
 
 #pragma once
@@ -18,7 +18,6 @@
      xxxxxx...xxx00 -> a pointer (distinguished by object_kind_t.)
      xxxxxx...xxx01 -> integer (immediate)
      xxxxxx...xxx10 -> floating point (immediate)
-     xxxxxx...xxx11 -> boolean (immediate)
  */
 #if __STD_VERSION__ <= 201710L
 typedef enum object_kind_t {
@@ -45,6 +44,11 @@ typedef struct object_t {
   } value;
 } object_t;
 
+// ! True Object
+extern const object_t object_true;
+// ! False Object
+extern const object_t object_false;
+
 // ! Test whether the object is an integer.
 /* !
  * \param v The object to be tested.
@@ -67,7 +71,7 @@ static inline bool object_is_floating(object_t * v) {
  * \return Whether v is a boolean value.
  */
 static inline bool object_is_boolean(object_t * v) {
-  return ((size_t)v&3) == 3;
+  return v == &object_true || v == &object_false;
 }
 
 // ! Get the integer value from the given object.
@@ -91,7 +95,7 @@ static inline int32_t object_get_integer(object_t * v) {
  * \param v The object to be freed.
  */
 static inline void object_free(object_t * v) {
-  if(((size_t)v & 3) == 0 && v != nullptr) em_free(v);
+  // if(((size_t)v & 3) == 0 && v != nullptr) em_free(v);
 }
 
 // ! Construct the new integer object.
@@ -105,3 +109,9 @@ static inline em_result object_new_int(object_t ** out, int32_t v) {
   *ret = (v << 2) | 1;
   return EM_RESULT_OK;
 }
+
+// ! Printing the object.
+/* !
+ * \param v The object to be printed.
+ */
+void object_print(object_t * v);
