@@ -49,6 +49,7 @@ parser_reader_getchar(parser_reader_t * reader) {
 }
 
 node_definition <- _ 'node' _ 'init' _ '[' _ ie:expression _ ']' _ n:identifier _ '=' _ e: expression _ EOL { $$ = parser_node_new(n, e, ie); }
+                 / _ 'node' _ n:identifier _ 'init' _ '[' _ ie:expression _ ']' _ '=' _ e: expression _ EOL { $$ = parser_node_new(n, e, ie); }
                  / _ 'node' _ n:identifier _ '=' _ e: expression _ EOL { $$ = parser_node_new(n, e, nullptr); }
 expression <- 'if' _ con:term _ 'then' _ the:term _ 'else' _ els:term { $$ = parser_expression_new_if(con, the, els); }
              / t:term { $$ = t; }
