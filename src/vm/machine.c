@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/19
+ * @date   2022/10/25
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -37,6 +37,44 @@ void
 node_cleaner(void * v) { node_deep_free((node_t *)v);}
 
 em_result
+check_dependencies(parser_expression_t * prog, list_t ** executionlist_head, list_t *** whereto_insert) {
+  em_result errres;
+  list_t * /*<node_t *>*/ cur = *executionlist_head;
+  list_t ** p = executionlist_head;
+  list_t * /*<string_t *>*/ dependencies;
+  CHKERR(list_default(&dependencies));
+  CHKERR(get_dependencies_ast(prog, &dependencies));
+  // Search where to insert.
+  // Inserted after all dependencies are satisfied.
+  while(!LIST_IS_EMPTY(&dependencies)) {
+    list_t * removed;
+    if(LIST_IS_EMPTY(&cur)) { // dependencies are not satisfied.
+      list_free(&dependencies);
+      return EM_RESULT_MISSING_IDENTIFIER;
+    }
+    node_t * n = (node_t *)(cur->value);
+    while((removed = list_remove(&dependencies, string_compare2, &(n->name))) != nullptr)
+      em_free(removed);
+    p = &((*p)->next);
+    cur = LIST_NEXT(cur);
+  }
+  *whereto_insert = p;
+  return EM_RESULT_OK;
+ err:
+  return errres;
+}
+
+bool has_cyclicreference(string_t * newnode_str, parser_expression_t * prog, list_t * executionlist_head, list_t * whereto_insert) {
+  // CHECK CYCLIC DEPENDENCIES!
+  for(list_t * pcur = executionlist_head; pcur != whereto_insert; pcur = pcur->next) {
+    if(((node_t *)(pcur->value))->program_kind == NODE_PROGRAM_KIND_AST &&
+       check_depends_on_ast(((node_t *)(pcur->value))->program.ast, newnode_str))
+      return true;
+  }
+  return false;
+}
+
+em_result
 machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog, parser_expression_t * initialization) {
   em_result errres;
   node_t new_node = { 0 };
@@ -49,83 +87,33 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
 
   if(isDefined) {
     em_result reason;
-    list_t * /*<string_t *>*/ dependencies;
+    list_t ** whereto_insert;
     list_t * /*<node_t *> */ revert = list_remove(&(self->execution_list.head), string_compare2, &str);
     if (&revert->next == self->execution_list.last)
         self->execution_list.last = &self->execution_list.head;
-    list_t * /*<node_t *>*/ cur = self->execution_list.head;
-    list_t ** /*<node_t *>*/ delay = &self->execution_list.head;
-    list_t * /*<string_t *>*/ removed = nullptr;
-    CHKERR(list_default(&dependencies));
-    CHKERR(get_dependencies_ast(prog, &dependencies));
-    // Search where to insert.
-    // Inserted after all dependencies are satisfied.
-    while(!LIST_IS_EMPTY(&dependencies) && !LIST_IS_EMPTY(&cur)) {
-      node_t * n = (node_t *)(cur->value);
-      do {
-        removed = list_remove(&dependencies, string_compare2, &(n->name));
-        if(removed != nullptr) em_free(removed);
-      } while(removed != nullptr);
-      delay = &((*delay)->next);
-      cur = LIST_NEXT(cur);
-      if(LIST_IS_EMPTY(&dependencies)) break;  // All dependencies are satisfied.
-    }
-    // Also all dependencies are not satisfied.
-    if(!LIST_IS_EMPTY(&dependencies)) {
-      errres = EM_RESULT_MISSING_IDENTIFIER;
-      list_free(&dependencies);
+    em_free(revert);
+    reason = check_dependencies(prog, &self->execution_list.head, &whereto_insert);
+    if(reason != EM_RESULT_OK)
+      goto err2;
+    if(has_cyclicreference(&str, prog, self->execution_list.head, *whereto_insert)) {
+      reason = EM_RESULT_CYCLIC_REFERENCE;
       goto err2;
     }
-    // CHECK CYCLIC DEPENDENCIES!
-    // Search 
-    list_t * pcur = self->execution_list.head;
-    while(pcur != cur) {
-      if(((node_t *)(pcur->value))->program_kind == NODE_PROGRAM_KIND_AST &&
-          check_depends_on_ast(((node_t *)(pcur->value))->program.ast, &str)) {
-        errres = EM_RESULT_CYCLIC_REFERENCE;
-        goto err2;
-      }
-      pcur = pcur->next;
-    }
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
-    CHKERR(list_add2(delay, node_t *, &ptr_to_new_node));
-    if(LIST_IS_EMPTY(&((*delay)->next)))
-      self->execution_list.last = &((*delay)->next);
-    em_free(revert);
+    CHKERR(list_add2(whereto_insert, node_t *, &ptr_to_new_node));
+    if(LIST_IS_EMPTY(&((*whereto_insert)->next)))
+      self->execution_list.last = &((*whereto_insert)->next);
     goto end;
 err2: // REVERTING
-    reason = errres;
-    CHKERR(list_default(&dependencies));
     if (out_val->program_kind == NODE_PROGRAM_KIND_AST) {
-      cur = self->execution_list.head;
-      delay = &self->execution_list.head;
-      CHKERR(get_dependencies_ast(out_val->program.ast, &dependencies));
-      // Search where to insert.
-      // Inserted after all dependencies are satisfied.
-      while (!LIST_IS_EMPTY(&dependencies) && !LIST_IS_EMPTY(&cur)) {
-          node_t * n = (node_t *)(cur->value);
-          do {
-            removed = list_remove(&dependencies, string_compare2, &(n->name));
-            if (removed != nullptr) em_free(removed);
-          } while (removed != nullptr);
-          delay = &((*delay)->next);
-          cur = LIST_NEXT(cur);
-          if (LIST_IS_EMPTY(&dependencies)) break;  // All dependencies are satisfied.
-      }
-      // Also all dependencies are not satisfied.
-      if (!LIST_IS_EMPTY(&dependencies)) {
-        errres = EM_RESULT_MISSING_IDENTIFIER;
-        list_free(&dependencies);
-        em_free(removed);
-        goto err;
-      }
+      CHKERR(check_dependencies(out_val->program.ast, &self->execution_list.head, &whereto_insert));
       // Cyclic Reference Checking is skipped.
     }
     else
-      delay = &(self->execution_list.head);
-    CHKERR(list_add2(delay, node_t *, &out_val));
-    if (LIST_IS_EMPTY(&((*delay)->next))) 
-        self->execution_list.last = &((*delay)->next);
+      whereto_insert = &(self->execution_list.head);
+    CHKERR(list_add2(whereto_insert, node_t *, &out_val));
+    if (LIST_IS_EMPTY(&((*whereto_insert)->next))) 
+        self->execution_list.last = &((*whereto_insert)->next);
     errres = reason;
     goto err;
   }
