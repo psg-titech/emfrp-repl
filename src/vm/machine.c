@@ -79,7 +79,13 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
   em_result errres;
   node_t new_node = { 0 };
   node_t * ptr_to_new_node;
+  list_t ** whereto_insert;
   CHKERR(node_new_ast(&new_node, str, prog));
+  if (initialization != nullptr) {
+    self->executing_node_name = &(ptr_to_new_node->name);
+    CHKERR(exec_ast(self, initialization, &(new_node.value)));
+    self->executing_node_name = nullptr;
+  }
   node_t * out_val = nullptr;
   bool isDefined = dictionary_get(&(self->nodes), (void**)&out_val, string_hasher, node_compare, &str);
   if(out_val != nullptr)
@@ -87,7 +93,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
 
   if(isDefined) {
     em_result reason;
-    list_t ** whereto_insert;
     list_t * /*<node_t *> */ revert = list_remove(&(self->execution_list.head), string_compare2, &str);
     if (&revert->next == self->execution_list.last)
         self->execution_list.last = &self->execution_list.head;
@@ -116,17 +121,12 @@ err2: // REVERTING
         self->execution_list.last = &((*whereto_insert)->next);
     errres = reason;
     goto err;
-  }
-  else {
+  }  else {
+    CHKERR(check_dependencies(prog, &(self->execution_list.head), &whereto_insert));
     CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void**)&ptr_to_new_node));
     CHKERR(queue_enqueue2(&(self->execution_list), node_t *, &ptr_to_new_node));
   }
   end:
-  if (initialization != nullptr) {
-    self->executing_node_name = &(ptr_to_new_node->name);
-    CHKERR(exec_ast(self, initialization, &(ptr_to_new_node->value)));
-    self->executing_node_name = nullptr;
-  }
   return EM_RESULT_OK;
  err:
   if(new_node.name.buffer != nullptr)
