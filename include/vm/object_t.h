@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/22
+ * @date   2022/10/28
  ------------------------------------------- */
 
 #pragma once
@@ -45,9 +45,9 @@ typedef struct object_t {
 } object_t;
 
 // ! True Object
-extern const object_t object_true;
+extern object_t object_true;
 // ! False Object
-extern const object_t object_false;
+extern object_t object_false;
 
 // ! Test whether the object is an integer.
 /* !

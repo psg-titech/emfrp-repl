@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/22
+ * @date   2022/10/28
  ------------------------------------------- */
 
 #include "ast.h"
@@ -10,10 +10,8 @@
 #include <stdio.h>
 
 const char * const binary_op_table[] = {
-  "+",
-  "-",
-  "/",
-  "*"
+  "+", "-", "/", "*", "%", "<<", ">>", "<=", "<", ">=", ">", "=", "!=",
+  "&", "|", "^", "&&", "||"
 };
 
 void

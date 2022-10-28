@@ -2,15 +2,15 @@
  * @file   object_t.c
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/25
+ * @date   2022/10/28
  ------------------------------------------- */
 #include "vm/object_t.h"
 #include <stdio.h>
 
 // ! True Object
-const object_t object_true;
+object_t object_true;
 // ! False Object
-const object_t object_false;
+object_t object_false;
 
 void
 object_print(object_t * v) {

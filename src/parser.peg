@@ -53,14 +53,38 @@ node_definition <- _ 'node' _ 'init' _ '[' _ ie:expression _ ']' _ n:identifier 
                  / _ 'node' _ n:identifier _ '=' _ e: expression _ EOL { $$ = parser_node_new(n, e, nullptr); }
 expression <- 'if' _ con:term _ 'then' _ the:term _ 'else' _ els:term { $$ = parser_expression_new_if(con, the, els); }
              / t:term { $$ = t; }
-term <- l:term _ '+' _ r:factor { $$ = parser_expression_new_addition(l, r); }
-      / l:term _ '-' _ r:factor { $$ = parser_expression_new_subtraction(l, r); }
-      / e:factor                { $$ = e; }
+
+term <- l:logical { $$ = l; }
+logical <- l:logical _ '&&' _ r:bitwise { $$ = parser_expression_new_dand(l, r); }
+         / l:logical _ '||' _ r:bitwise { $$ = parser_expression_new_dor (l, r); }
+         / b:bitwise { $$ = b; }
+
+bitwise <- l:bitwise _ '&' _ r:comp { $$ = parser_expression_new_and(l, r); }
+         / l:bitwise _ '|' _ r:comp { $$ = parser_expression_new_or (l, r); }
+	 / l:bitwise _ '^' _ r:comp { $$ = parser_expression_new_xor(l, r); }
+	 / c:comp { $$ = c; }
+
+comp <- l:comp _ '='  _ r:comp2 { $$ = parser_expression_new_equal           (l, r); }
+      / l:comp _ '!=' _ r:comp2 { $$ = parser_expression_new_not_equal       (l, r); }
+      / c:comp2 { $$ = c; }
+      
+comp2 <- l:comp2 _ '<=' _ r:shift { $$ = parser_expression_new_less_or_equal   (l, r); }
+       / l:comp2 _ '<'  _ r:shift { $$ = parser_expression_new_less_than       (l, r); }
+       / l:comp2 _ '>=' _ r:shift { $$ = parser_expression_new_greater_or_equal(l, r); }
+       / l:comp2 _ '>'  _ r:shift { $$ = parser_expression_new_greater_than    (l, r); }
+       / s:shift                 { $$ = s; }
+
+shift <- l:shift '<<' _ r:add { $$ = parser_expression_new_left_shift(l, r); }
+       / l:shift '<<' _ r:add { $$ = parser_expression_new_right_shift(l, r); }
+       / a:add                { $$ = a; }
+
+add <- l:add _ '+' _ r:factor { $$ = parser_expression_new_addition(l, r); }
+     / l:add _ '-' _ r:factor { $$ = parser_expression_new_subtraction(l, r); }
+     / e:factor                 { $$ = e; }
 
 factor <- l:factor _ '*' _ r:unary { $$ = parser_expression_new_multiplication(l, r); }
         / l:factor _ '/' _ r:unary { $$ = parser_expression_new_division(l, r); }
-	/ l:factor _ '&' _ r:unary
-	/ l:factor _ '|' _ r:unary
+	/ l:factor _ '%' _ r:unary { $$ = parser_expression_new_modulo(l, r); }
         / e:primary                { $$ = e; }
 
 unary <- '+' _ e:unary

@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/22
+ * @date   2022/10/28
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -10,11 +10,24 @@
 em_result
 exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t * l, parser_expression_t * r, object_t ** out) {
   object_t * lro = nullptr, * rro = nullptr;
+  bool lro_is_integer, rro_is_integer;
   em_result errres;
   CHKERR(exec_ast(m, l, &lro));
-  CHKERR(exec_ast(m, r, &rro));
 
-  if(object_is_integer(lro) && object_is_integer(rro)) {
+  if(kind == EXPR_KIND_DAND && lro == &object_false) {
+    *out = &object_false;
+    return EM_RESULT_OK;
+  } else if(kind == EXPR_KIND_DOR && lro != &object_false) {
+    *out = lro;
+    return EM_RESULT_OK;
+  }
+  
+  CHKERR(exec_ast(m, r, &rro));
+  
+  lro_is_integer = object_is_integer(lro);
+  rro_is_integer = object_is_integer(rro);
+
+  if(lro_is_integer && rro_is_integer) {
     int32_t retVal = 0;
     int32_t ll = object_get_integer(lro);
     int32_t rr = object_get_integer(rro);
@@ -23,14 +36,61 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
     case EXPR_KIND_SUBTRACTION: retVal = ll - rr; break;
     case EXPR_KIND_DIVISION: retVal = ll / rr; break;
     case EXPR_KIND_MULTIPLICATION: retVal = ll * rr; break;
+    case EXPR_KIND_MODULO: retVal = ll % rr; break;
+    case EXPR_KIND_LEFT_SHIFT: retVal = ll << rr; break;
+    case EXPR_KIND_RIGHT_SHIFT: retVal = ll >> rr; break;
+    case EXPR_KIND_LESS_OR_EQUAL: retVal = ll <= rr; break;
+    case EXPR_KIND_LESS_THAN: retVal = ll < rr; break;
+    case EXPR_KIND_GREATER_OR_EQUAL: retVal = ll >= rr; break;
+    case EXPR_KIND_GREATER_THAN: retVal = ll > rr; break;
+    case EXPR_KIND_EQUAL: retVal = ll == rr; break;
+    case EXPR_KIND_NOT_EQUAL: retVal = ll != rr; break;
+    case EXPR_KIND_AND: retVal = ll & rr; break;
+    case EXPR_KIND_OR: retVal = ll | rr; break;
+    case EXPR_KIND_XOR: retVal = ll ^ rr; break;
     default: DEBUGBREAK; break;
     }
-    object_new_int(out, retVal);
+    if(kind >= EXPR_KIND_LESS_OR_EQUAL || kind <= EXPR_KIND_GREATER_THAN)
+      *out = retVal ? &object_true : &object_false;
+    else
+      object_new_int(out, retVal);
     return EM_RESULT_OK;
-  }else {
+  } else {
+    switch(kind) {
+    case EXPR_KIND_EQUAL:
+      if(lro->kind != rro->kind) {
+	*out = &object_false;
+	goto ok;
+      }
+      // Add here if you added the new type.
+      *out = &object_true;
+      goto ok;
+    case EXPR_KIND_NOT_EQUAL:
+      if(lro->kind != rro->kind) {
+	*out = &object_true;
+	goto ok;
+      }
+      // Add here if you added the new type.
+      *out = &object_true;
+      goto ok;
+    case EXPR_KIND_AND: case EXPR_KIND_DAND: // Code size than performance.
+      *out = (lro != &object_false) && (rro != &object_false) ? &object_true : &object_false;
+      goto ok;
+    case EXPR_KIND_OR: case EXPR_KIND_DOR: // Code size than performance.
+      *out = (lro != &object_false) || (rro != &object_false) ? &object_true : &object_false;
+      goto ok;
+    case EXPR_KIND_XOR:
+      *out = (lro != &object_false) ^ (rro != &object_false) ? &object_true : &object_false;
+      goto ok;
+    default:
+      object_free(lro);
+      object_free(rro);
+      return EM_RESULT_TYPE_MISMATCH;
+    }
+  ok:
     object_free(lro);
     object_free(rro);
-    return EM_RESULT_TYPE_MISMATCH;
+    return EM_RESULT_OK;
   }
 
  err:

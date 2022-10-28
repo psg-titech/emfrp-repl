@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/22
+ * @date   2022/10/28
  ------------------------------------------- */
 
 #pragma once
@@ -32,6 +32,35 @@ typedef enum parser_expression_kind_t : int32_t {
   EXPR_KIND_DIVISION = 9,
   // ! Multiplication(a * b)
   EXPR_KIND_MULTIPLICATION = 13,
+  // ! Modulo (a % b)
+  EXPR_KIND_MODULO = 0x11,
+  // ! Left Shift (a << b)
+  EXPR_KIND_LEFT_SHIFT = 0x15,
+  // ! Right Shift (a >> b)
+  EXPR_KIND_RIGHT_SHIFT = 0x19,
+  // ! Less or Equal(a <= b)
+  EXPR_KIND_LESS_OR_EQUAL = 0x1D,
+  // ! Less than(a < b)
+  EXPR_KIND_LESS_THAN = 0x21,
+  // ! Greater or Equal(a >= b)
+  EXPR_KIND_GREATER_OR_EQUAL = 0x25,
+  // ! Greater than(a > b)
+  EXPR_KIND_GREATER_THAN = 0x29,
+  // ! Equal(a = b)
+  EXPR_KIND_EQUAL = 0x2D,
+  // ! Not Equal(a != b)
+  EXPR_KIND_NOT_EQUAL = 0x31,
+  // ! And(a & b)
+  EXPR_KIND_AND = 0x35,
+  // ! Or(a | b)
+  EXPR_KIND_OR = 0x39,
+  // ! Xor(a ^ b)
+  EXPR_KIND_XOR = 0x3D,
+  // ! Double And (a && b)
+  EXPR_KIND_DAND = 0x41,
+  // ! Double Or (a || b)
+  EXPR_KIND_DOR = 0x45,
+    
   // ! Floating literal
   EXPR_KIND_FLOATING = 6,
   // ! Identifier
@@ -133,6 +162,20 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
 #define parser_expression_new_subtraction(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_SUBTRACTION)
 #define parser_expression_new_multiplication(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_MULTIPLICATION)
 #define parser_expression_new_division(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_DIVISION)
+#define parser_expression_new_modulo(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_MODULO)
+#define parser_expression_new_left_shift(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_LEFT_SHIFT)
+#define parser_expression_new_right_shift(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_RIGHT_SHIFT)
+#define parser_expression_new_less_or_equal(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_LESS_OR_EQUAL)
+#define parser_expression_new_less_than(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_LESS_THAN)
+#define parser_expression_new_greater_or_equal(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_GREATER_OR_EQUAL)
+#define parser_expression_new_greater_than(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_GREATER_THAN)
+#define parser_expression_new_equal(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_EQUAL)
+#define parser_expression_new_not_equal(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_NOT_EQUAL)
+#define parser_expression_new_and(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_AND)
+#define parser_expression_new_or(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_OR)
+#define parser_expression_new_xor(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_XOR)
+#define parser_expression_new_dand(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_DAND)
+#define parser_expression_new_dor(lhs, rhs) parser_expression_new_binary(lhs, rhs, EXPR_KIND_DOR)
 
 static inline parser_expression_t *
 parser_expression_new_if(parser_expression_t * cond, parser_expression_t * then, parser_expression_t * otherwise) {
