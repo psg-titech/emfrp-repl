@@ -2,14 +2,14 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/19
+ * @date   2022/10/28
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
 #include "emmem.h"
 #include "emfrp_parser.h"
 #include "emfrp.h"
-
+#include <stdio.h>
 typedef struct emfrp_t{
   machine_t * machine;
 } emfrp_t;
@@ -78,6 +78,16 @@ err:
 }
 
 EM_EXPORTDECL bool
+emfrp_update(emfrp_t * self) {
+  em_result errres;
+  CHKERR(machine_indicate(self->machine, nullptr, 0));
+  return false;
+err:
+  return true;
+}
+
+
+EM_EXPORTDECL bool
 emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_output_node_callback callback) {
   string_t s, s_dup;
   string_new1(&s, node_name);
@@ -90,6 +100,14 @@ emfrp_create_int_object(int32_t num) {
   em_object_t * output = nullptr;
   object_new_int(&output, num);
   return output;
+}
+EM_EXPORTDECL em_object_t *
+emfrp_get_true_object(void) {
+  return &object_true;
+}
+EM_EXPORTDECL em_object_t *
+emfrp_get_false_object(void) {
+  return &object_false;
 }
 
 EM_EXPORTDECL int32_t
