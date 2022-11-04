@@ -2,13 +2,16 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/18
+ * @date   2022/11/4
  ------------------------------------------- */
 #include "collections/list_t.h"
 
 em_result
 list_add(list_t ** out, size_t value_size, void * value) {
-  list_t * ret = (list_t *)em_malloc(sizeof(list_t *) + value_size);
+  list_t * ret = nullptr;
+  em_result err = em_malloc((void **)&ret, sizeof(list_t *) + value_size);
+  if(err != EM_RESULT_OK)
+    return err;
   ret->next = *out;
   memcpy(&(ret->value), value, value_size);
   *out = ret;
@@ -17,7 +20,10 @@ list_add(list_t ** out, size_t value_size, void * value) {
 
 em_result
 list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr) {
-  list_t * ret = (list_t *)em_malloc(sizeof(list_t *) + value_size);
+  list_t * ret = nullptr;
+  em_result err = em_malloc((void **)&ret, sizeof(list_t *) + value_size);
+  if(err != EM_RESULT_OK)
+    return err;
   ret->next = *out;
   memcpy(&(ret->value), value, value_size);
   *out = ret;
@@ -94,7 +100,10 @@ list_remove2(list_t ** self, bool(comparer(void *, void *)), void * search_value
 
 em_result
 queue_enqueue(queue_t * out, size_t value_size, void * value) {
-  list_t * ret = (list_t *)em_malloc(sizeof(list_t *) + value_size);
+  list_t * ret = nullptr;
+  em_result err = em_malloc((void **)&ret, sizeof(list_t *) + value_size);
+  if(err != EM_RESULT_OK)
+    return err;
   ret->next = nullptr;
   memcpy(&(ret->value), value, value_size);
   *(out->last) = ret;

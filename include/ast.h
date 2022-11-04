@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/28
+ * @date   2022/11/4
  ------------------------------------------- */
 
 #pragma once
@@ -132,7 +132,9 @@ typedef struct parser_node_t {
  */
 static inline parser_node_t *
 parser_node_new(string_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression) {
-  parser_node_t * ret = (parser_node_t *)em_malloc(sizeof(parser_node_t));
+  parser_node_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_node_t)))
+    return nullptr;
   ret->name = *node_name;
   ret->expression = expression;
   ret->init_expression = init_expression;
@@ -151,7 +153,9 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
 #if DEBUG
   if(kind & 1 == 0) DEBUGBREAK;
 #endif
-  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)) != EM_RESULT_OK)
+    return nullptr;
   ret->kind = kind;
   ret->value.binary.lhs = lhs;
   ret->value.binary.rhs = rhs;
@@ -179,7 +183,9 @@ parser_expression_new_binary(parser_expression_t * lhs, parser_expression_t * rh
 
 static inline parser_expression_t *
 parser_expression_new_if(parser_expression_t * cond, parser_expression_t * then, parser_expression_t * otherwise) {
-  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
   ret->kind = EXPR_KIND_IF;
   ret->value.ifthenelse.cond = cond;
   ret->value.ifthenelse.then = then;
@@ -204,7 +210,9 @@ parser_expression_new_integer(int32_t num) {
  */
 static inline parser_expression_t *
 parser_expression_new_identifier(string_t * ident) {
-  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
   ret->kind = EXPR_KIND_IDENTIFIER;
   ret->value.identifier = *ident;
   return ret;
@@ -217,7 +225,9 @@ parser_expression_new_identifier(string_t * ident) {
  */
 static inline parser_expression_t *
 parser_expression_new_last_identifier(string_t * ident) {
-  parser_expression_t * ret = (parser_expression_t *)em_malloc(sizeof(parser_expression_t));
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
   ret->kind = EXPR_KIND_LAST_IDENTIFIER;
   ret->value.identifier = *ident;
   return ret;

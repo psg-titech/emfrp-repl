@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/28
+ * @date   2022/11/4
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -18,9 +18,9 @@ EM_EXPORTDECL emfrp_t *
 emfrp_create(void) {
   em_result errres;
   emfrp_t * ret = nullptr;
-  ret = em_malloc(sizeof(emfrp_t));
+  CHKERR(em_malloc((void **)&ret, sizeof(emfrp_t)));
   ret->machine = nullptr;
-  ret->machine = em_malloc(sizeof(machine_t));
+  CHKERR(em_malloc((void **)&(ret->machine), sizeof(machine_t)));
   machine_new(ret->machine);
   return ret;
  err:

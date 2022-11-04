@@ -27,9 +27,9 @@ parser_reader_getchar(parser_reader_t * reader);
 #endif
 #define PCC_ERROR(auxil) fprintf(stderr, "ERROR")
 #define PCC_GETCHAR(auxil) parser_reader_getchar(auxil)
-#define PCC_MALLOC(auxil, size) em_malloc(size)
-#define PCC_REALLOC(auxil, ptr, size) em_realloc(ptr, size)
-#define PCC_FREE(auxil, ptr) em_free(ptr)
+#define PCC_MALLOC(auxil, size) malloc(size)
+#define PCC_REALLOC(auxil, ptr, size) realloc(ptr, size)
+#define PCC_FREE(auxil, ptr) free(ptr)
 
 em_result
 parser_reader_new(parser_reader_t * out, string_t * str) {
