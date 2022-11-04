@@ -2,10 +2,11 @@
  * @file   arraylist_t.h
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2022/11/4
  ------------------------------------------- */
 #pragma once
 
+#include "em_result.h"
 #include "emmem.h"
 #include <stdlib.h>
 
@@ -62,7 +63,7 @@ void arraylist_remove(arraylist_t * self, void * out, size_t index, size_t item_
  * /param item_size sizeof(*out).
  * /param value The item to be inserted.
  */
-void arraylist_removeinsert(arraylist_t * self, void * out, size_t remove_index, size_t insert_index, size_t item_size, void * value);
+void arraylist_removeinsert(arraylist_t * self, void ** out, size_t remove_index, size_t insert_index, size_t item_size, void * value);
 
 // ! Get an item from the array list.
 /* !
