@@ -2,7 +2,7 @@
  * @file   list_t.h
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/18
+ * @date   2022/11/24
  ------------------------------------------- */
 #pragma once
 #include "emmem.h"
@@ -29,7 +29,7 @@ typedef struct queue_t {
 // ! Default constructor of list_t.
 /* !
  * /param out The result
- * /return The status code
+p * /return The status code
  */
 static inline em_result list_default(list_t ** out) {
   *out = nullptr;
@@ -146,3 +146,5 @@ em_result queue_dequeue(queue_t * self, size_t value_size, void * out);
  */
 em_result queue_add_head(queue_t * out, size_t value_size, void * value);
 #define queue_add_head2(self, ty, out) queue_add_head(self, sizeof(ty), out)
+
+#define FOREACH_LIST(v, li) if(li!=nullptr)for(v = &(li->value); !LIST_IS_EMPTY(&li); li = li->next)

@@ -21,6 +21,8 @@ typedef enum em_result_t {
   EM_RESULT_OUT_OF_INDEX = 3,
   // ! Invalid Argument
   EM_RESULT_INVALID_ARGUMENT = 4,
+  // ! memory_manager_t::worklist is overflowed.
+  EM_RESULT_GC_WORKLIST_OVERFLOW = 5,
   // Below, users are responsible.
   // ! Type Mismatch
   EM_RESULT_TYPE_MISMATCH = 16,

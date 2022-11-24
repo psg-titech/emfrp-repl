@@ -2,7 +2,7 @@
  * @file   dictionary_t.h
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/11
+ * @date   2022/11/24
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
@@ -66,3 +66,5 @@ bool dictionary_get(dictionary_t * self, void ** out, size_t(hasher(void *)), bo
  * \return Whether found or not
  */
 bool dictionary_contains(dictionary_t * self, size_t(hasher(void *)), bool(comparer(void *, void *)), void * search_value);
+
+#define FOREACH_DICTIONARY(li, dic) li = (dic)->values[0]; for(int i = 0; i < DICTIONARY_TABLE_SIZE; ++i, li = (dic)->values[i])

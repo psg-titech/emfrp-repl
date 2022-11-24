@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/28
+ * @date   2022/11/24
  ------------------------------------------- */
 
 #pragma once
@@ -17,19 +17,24 @@
    If the pointer of object_t is
      xxxxxx...xxx00 -> a pointer (distinguished by object_kind_t.)
      xxxxxx...xxx01 -> integer (immediate)
-     xxxxxx...xxx10 -> floating point (immediate)
+     xxxxxx...xxx10 -> reserved
+     xxxxxx...xxx11 -> reserved
  */
 #if __STD_VERSION__ <= 201710L
 typedef enum object_kind_t {
 #else
 typedef enum object_kind_t : int32_t {
 #endif
-  // ! Invalid.
-  EMFRP_OBJECT_INVALID = 0,
+  // ! Free
+  EMFRP_OBJECT_FREE = 0,
+  // ! Tuple<T>
+  EMFRP_OBJECT_TUPLE1 = 1 << 1,
+  // ! Tuple<T1, T2>
+  EMFRP_OBJECT_TUPLE2 = 2 << 1,
   // ! Symbol
-  EMFRP_OBJECT_SYMBOL = 1,
+  EMFRP_OBJECT_SYMBOL = 3 << 1,
   // ! String
-  EMFRP_OBJECT_STRING = 2
+  EMFRP_OBJECT_STRING = 4 << 1
 } object_kind_t;
 
 // ! Object.
@@ -37,10 +42,16 @@ typedef struct object_t {
   // ! kind of value.
   object_kind_t kind;
   union {
+    // ! used on Free.
+    struct{ struct object_t * next; } free;
     // ! used on String.
     struct{ string_t value; } string;
     // ! used on Symbol.
     struct{ string_t value; } symbol;
+    // ! used on tuple 1.
+    struct{ struct object_t * i0; } tuple1;
+    // ! used on tuple 2.
+    struct{ struct object_t * i0; struct object_t * i1; } tuple2;
   } value;
 } object_t;
 
@@ -48,6 +59,45 @@ typedef struct object_t {
 extern object_t object_true;
 // ! False Object
 extern object_t object_false;
+#define object_is_pointer(v) (((size_t)v & 3) == 0)
+
+// ! Mark the object.
+/* !
+ * \param self The object to be marked.
+ */
+static inline void
+object_mark(object_t * self) {
+  self->kind = self->kind | 1;
+}
+
+// ! Unmark the object.
+/* !
+ * \param o The object to be unmarked.
+ */
+static inline void
+object_unmark(object_t * self) {
+  self->kind = (self->kind & (int32_t)(-1 ^ 1));
+}
+
+// ! Test whether the object is marked.
+/* !
+ * \param o The object to be tested.
+ */
+static inline bool
+object_is_marked(object_t * self) {
+  return self->kind & 1;
+}
+
+// ! Create free object for garbage collections.
+/* !
+ * \param o The object to be renewed.
+ * \param n The next object.
+ */
+static inline void
+object_new_freelist(object_t * o, object_t * next) {
+  o->kind = EMFRP_OBJECT_FREE;
+  o->value.free.next = next;
+}
 
 // ! Test whether the object is an integer.
 /* !

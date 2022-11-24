@@ -12,6 +12,7 @@
 #include "ast.h"
 #include "vm/node_t.h"
 #include "vm/object_t.h"
+#include "vm/gc.h"
 
 // ! Virtual Machine.
 typedef struct machine_t {
@@ -31,6 +32,8 @@ typedef struct machine_t {
    * If the machine is not currently executing any ndoes, it must be nullptr.
    */
   string_t * executing_node_name;
+  // ! The memory manager.
+  memory_manager_t * memory_manager;
 } machine_t;
 
 // ! Constructor of machine_t.

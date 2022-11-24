@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/25
+ * @date   2022/11/25
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -26,6 +26,7 @@ machine_new(machine_t * out) {
   em_result errres;
   CHKERR(queue_default(&(out->execution_list)));
   CHKERR(dictionary_new(&(out->nodes)));
+  CHKERR(memory_manager_new(&(out->memory_manager)));
   out->executing_node_name = nullptr;
   return EM_RESULT_OK;
  err: return errres;
