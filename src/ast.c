@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/28
+ * @date   2022/11/25
  ------------------------------------------- */
 
 #include "ast.h"
@@ -33,6 +33,8 @@ parser_expression_print(parser_expression_t * e) {
     printf(" %s ", binary_op_table[e->kind >> 2]);
     parser_expression_print(e->value.binary.rhs);
     printf(")");
+  } else if (e == nullptr) {
+    printf("NIL");
   } else {
     switch(e->kind) {
     case EXPR_KIND_FLOATING:
@@ -49,6 +51,17 @@ parser_expression_print(parser_expression_t * e) {
       printf(" else ");
       parser_expression_print(e->value.ifthenelse.otherwise);
       break;
+    case EXPR_KIND_TUPLE:
+      printf("(");
+      parser_expression_tuple_list_t * tl = &(e->value.tuple);
+      while(tl != nullptr) {
+        parser_expression_print(tl->value);
+        if(tl->next != nullptr)
+          printf(", ");
+        tl = tl->next;
+      }
+      printf(")");
+      break;
     default: DEBUGBREAK; break;
     }
   }
@@ -58,10 +71,25 @@ void
 parser_expression_free(parser_expression_t * expr) {
   if(EXPR_KIND_IS_INTEGER(expr)) return; // It is integer-typed.
   if(EXPR_KIND_IS_BOOLEAN(expr)) return; // It is boolean-typed.
+  if(expr == nullptr) return;
   if(EXPR_KIND_IS_BIN_OP(expr)) {
     parser_expression_free(expr->value.binary.lhs);
     parser_expression_free(expr->value.binary.rhs);
   } else if(expr->kind == EXPR_KIND_IDENTIFIER || expr->kind == EXPR_KIND_LAST_IDENTIFIER)
     string_free(&(expr->value.identifier));
+  else if(expr->kind == EXPR_KIND_IF) {
+    parser_expression_free(expr->value.ifthenelse.cond);
+    parser_expression_free(expr->value.ifthenelse.then);
+    parser_expression_free(expr->value.ifthenelse.otherwise);
+  } else if(expr->kind == EXPR_KIND_TUPLE) {
+    parser_expression_tuple_list_t * tl = expr->value.tuple.next;
+    while(tl != nullptr) {
+      parser_expression_tuple_list_t * v = tl->next;
+      parser_expression_free(tl->value);
+      free(tl);
+      tl = v;
+    }
+    parser_expression_free(expr->value.tuple.value);
+  }
   free(expr);
 }

@@ -96,11 +96,15 @@ primary <- '0'                       { $$ = parser_expression_new_integer(0); }
          / <[1-9][0-9]*>             { $$ = parser_expression_new_integer(atoi($1)); }
          / '0x' <[0-9]+>             { $$ = parser_expression_new_integer(strtol($2, NULL, 16)); }
          / '0' <[0-9]+>              { $$ = parser_expression_new_integer(strtol($3, NULL, 8)); }
+         / '(' _ vs:tuple_inner _ ')'{ $$ = vs; }
          / '(' _ e:expression _ ')'  { $$ = e; }
-	 / 'true'                    { $$ = parser_expression_true(); }
-	 / 'false'                   { $$ = parser_expression_false(); }
-	 / ident:lastidentifier      { $$ = parser_expression_new_last_identifier(ident); em_free(ident); }
+         / 'true'                    { $$ = parser_expression_true(); }
+         / 'false'                   { $$ = parser_expression_false(); }
+         / ident:lastidentifier      { $$ = parser_expression_new_last_identifier(ident); em_free(ident); }
          / ident:identifier          { $$ = parser_expression_new_identifier(ident); em_free(ident); }
+
+tuple_inner <- e:expression _ ',' _ vs:tuple_inner { $$ = parser_expression_tuple_prepend(vs, e); }
+             / e:expression { $$ = parser_expression_new_tuple(e); }
 
 _ <- [ \t]*
 EOL <- '\n' / '\r\n' / '\r' / ';' / !.

@@ -2,13 +2,22 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/4
+ * @date   2022/11/25
  ------------------------------------------- */
 
 #pragma once
 #include "emmem.h"
 #include "string_t.h"
 #include <stdint.h>
+
+struct parser_expression_t;
+
+typedef struct parser_expression_tuple_list_t {
+  struct parser_expression_t * value;
+  struct parser_expression_tuple_list_t * next;
+} parser_expression_tuple_list_t;
+
+#define PARSER_EXPRESSION_KIND_SHIFT 3
 
 // ! kind enum type of parser expression.
 /* !
@@ -25,50 +34,52 @@ typedef enum parser_expression_kind_t : int32_t {
   // ! Null(Illegal)
   EXPR_KIND_NULL = 0,
   // ! Addition(a + b)
-  EXPR_KIND_ADDITION = 1,
+  EXPR_KIND_ADDITION = 0 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Substraction(a - b)
-  EXPR_KIND_SUBTRACTION = 5,
+  EXPR_KIND_SUBTRACTION = 1 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Division(a / b)
-  EXPR_KIND_DIVISION = 9,
+  EXPR_KIND_DIVISION = 2 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Multiplication(a * b)
-  EXPR_KIND_MULTIPLICATION = 13,
+  EXPR_KIND_MULTIPLICATION = 3 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Modulo (a % b)
-  EXPR_KIND_MODULO = 0x11,
+  EXPR_KIND_MODULO = 4 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Left Shift (a << b)
-  EXPR_KIND_LEFT_SHIFT = 0x15,
+  EXPR_KIND_LEFT_SHIFT = 5 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Right Shift (a >> b)
-  EXPR_KIND_RIGHT_SHIFT = 0x19,
+  EXPR_KIND_RIGHT_SHIFT = 6 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Less or Equal(a <= b)
-  EXPR_KIND_LESS_OR_EQUAL = 0x1D,
+  EXPR_KIND_LESS_OR_EQUAL = 7 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Less than(a < b)
-  EXPR_KIND_LESS_THAN = 0x21,
+  EXPR_KIND_LESS_THAN = 8 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Greater or Equal(a >= b)
-  EXPR_KIND_GREATER_OR_EQUAL = 0x25,
+  EXPR_KIND_GREATER_OR_EQUAL = 9 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Greater than(a > b)
-  EXPR_KIND_GREATER_THAN = 0x29,
+  EXPR_KIND_GREATER_THAN = 10 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Equal(a = b)
-  EXPR_KIND_EQUAL = 0x2D,
+  EXPR_KIND_EQUAL = 11 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Not Equal(a != b)
-  EXPR_KIND_NOT_EQUAL = 0x31,
+  EXPR_KIND_NOT_EQUAL = 12 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! And(a & b)
-  EXPR_KIND_AND = 0x35,
+  EXPR_KIND_AND = 13 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Or(a | b)
-  EXPR_KIND_OR = 0x39,
+  EXPR_KIND_OR = 14 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Xor(a ^ b)
-  EXPR_KIND_XOR = 0x3D,
+  EXPR_KIND_XOR = 15 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Double And (a && b)
-  EXPR_KIND_DAND = 0x41,
+  EXPR_KIND_DAND = 16 << PARSER_EXPRESSION_KIND_SHIFT | 1,
   // ! Double Or (a || b)
-  EXPR_KIND_DOR = 0x45,
+  EXPR_KIND_DOR = 17 << PARSER_EXPRESSION_KIND_SHIFT | 1,
     
   // ! Floating literal
-  EXPR_KIND_FLOATING = 6,
+  EXPR_KIND_FLOATING = 1 << PARSER_EXPRESSION_KIND_SHIFT,
   // ! Identifier
-  EXPR_KIND_IDENTIFIER = 4,
+  EXPR_KIND_IDENTIFIER = 2 << PARSER_EXPRESSION_KIND_SHIFT,
   // ! Identifier @last
-  EXPR_KIND_LAST_IDENTIFIER = 8,
+  EXPR_KIND_LAST_IDENTIFIER = 3 << PARSER_EXPRESSION_KIND_SHIFT,
   // ! If expression
-  EXPR_KIND_IF = 12
+  EXPR_KIND_IF = 4 << PARSER_EXPRESSION_KIND_SHIFT,
+  // ! Tuple expression
+  EXPR_KIND_TUPLE = 5 << PARSER_EXPRESSION_KIND_SHIFT
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
@@ -110,6 +121,8 @@ typedef struct parser_expression_t {
     float floating;
     // ! When kind is EXPR_KIND_IDENTIFIER or EXPR_KIND_LAST_IDENTIFIER.
     string_t identifier;
+    // ! When kind is EXPR_KIND_TUPLE.
+    parser_expression_tuple_list_t tuple;
   } value;
 } parser_expression_t;
 
@@ -231,6 +244,40 @@ parser_expression_new_last_identifier(string_t * ident) {
   ret->kind = EXPR_KIND_LAST_IDENTIFIER;
   ret->value.identifier = *ident;
   return ret;
+}
+
+// ! Constructor of tuple expression.
+/* !
+ * \param e Inner expression.
+ */
+static inline parser_expression_t *
+parser_expression_new_tuple(parser_expression_t * inner) {
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
+  ret->kind = EXPR_KIND_TUPLE;
+  ret->value.tuple.next = nullptr;
+  ret->value.tuple.value = inner;
+}
+
+// ! Prepend to the tuple expression.
+/* !
+ * \param self The tuple expression add to.
+ * \param inner The expression to be added.
+ */
+static inline parser_expression_t *
+parser_expression_tuple_prepend(parser_expression_t * self, parser_expression_t * inner) {
+  #if DEBUG
+  if(self->kind != EXPR_KIND_TUPLE)
+    DEBUGBREAK;
+  #endif
+  parser_expression_tuple_list_t * new_tl = nullptr;
+  if(em_malloc((void **)&new_tl, sizeof(parser_expression_tuple_list_t)))
+    return nullptr;
+  *new_tl= self->value.tuple;
+  self->value.tuple.next = new_tl;
+  self->value.tuple.value = inner;
+  return self;
 }
 
 // ! Freeing parser_expression_t.
