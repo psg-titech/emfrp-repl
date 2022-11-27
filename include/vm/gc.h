@@ -2,7 +2,7 @@
  * @file   gc.h
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/24
+ * @date   2022/11/27
  ------------------------------------------- */
 
 #pragma once
@@ -73,3 +73,11 @@ em_result memory_manager_alloc(struct machine_t * self, object_t ** o);
 // ! Force to GC(TBD)
 em_result memory_manager_force_gc(memory_manager_t * self);
 #define machine_force_gc memory_manager_force_gc
+
+// ! Return the object to Memory manager immediately.
+/* !
+ * /param self The memory manager.
+ * /param v The object to be returned.
+ */
+void memory_manager_return(memory_manager_t * self, object_t * v);
+#define machine_return(self, v) memory_manager_return(self->memory_manager, v)

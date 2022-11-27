@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/24
+ * @date   2022/11/27
  ------------------------------------------- */
 #include "emmem.h"
 #include "vm/gc.h"
@@ -65,6 +65,10 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
     case EMFRP_OBJECT_TUPLE2:
       CHKERR(push_worklist(self, cur->value.tuple2.i0));
       CHKERR(push_worklist(self, cur->value.tuple2.i1));
+      break;
+    case EMFRP_OBJECT_TUPLEN:
+      for(size_t i = 0; i < cur->value.tupleN.length; ++i)
+	CHKERR(push_worklist(self, object_tuple_ith(cur, i)));
       break;
     }
   }
@@ -141,4 +145,12 @@ memory_manager_alloc(machine_t * self, object_t ** o) {
 }
 em_result memory_manager_force_gc(memory_manager_t * self) {
   DEBUGBREAK;
+}
+
+void
+memory_manager_return(memory_manager_t * self, object_t * v) {
+  if(!object_is_pointer(v)) return;
+  v->kind = EMFRP_OBJECT_FREE;
+  v->value.free.next = self->freelist;
+  self->freelist = v;
 }

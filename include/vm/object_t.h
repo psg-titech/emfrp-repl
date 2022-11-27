@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/24
+ * @date   2022/11/27
  ------------------------------------------- */
 
 #pragma once
@@ -31,10 +31,12 @@ typedef enum object_kind_t : int32_t {
   EMFRP_OBJECT_TUPLE1 = 1 << 1,
   // ! Tuple<T1, T2>
   EMFRP_OBJECT_TUPLE2 = 2 << 1,
+  // ! Tuple<T1, T2, T3, ...>
+  EMFRP_OBJECT_TUPLEN = 3 << 1,
   // ! Symbol
-  EMFRP_OBJECT_SYMBOL = 3 << 1,
+  EMFRP_OBJECT_SYMBOL = 4 << 1,
   // ! String
-  EMFRP_OBJECT_STRING = 4 << 1
+  EMFRP_OBJECT_STRING = 5 << 1
 } object_kind_t;
 
 // ! Object.
@@ -52,6 +54,8 @@ typedef struct object_t {
     struct{ struct object_t * i0; } tuple1;
     // ! used on tuple 2.
     struct{ struct object_t * i0; struct object_t * i1; } tuple2;
+    // ! used on tuple N.
+    struct{ size_t length; struct object_t *** data; } tupleN;
   } value;
 } object_t;
 
@@ -159,6 +163,50 @@ static inline em_result object_new_int(object_t ** out, int32_t v) {
   *ret = (v << 2) | 1;
   return EM_RESULT_OK;
 }
+
+// ! Construct the new tuple1 object.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param v The value.
+ * \return The result.
+ */
+static inline em_result
+object_new_tuple1(object_t * out, object_t * v) {
+  out->kind = EMFRP_OBJECT_TUPLE1;
+  out->value.tuple1.i0 = v;
+  return EM_RESULT_OK;
+}
+
+// ! Construct the new tuple2 object.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param v0 The value.
+ * \param v1 The value.
+ * \return The result.
+ */
+static inline em_result
+object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
+  out->kind = EMFRP_OBJECT_TUPLE2;
+  out->value.tuple2.i0 = v0;
+  out->value.tuple2.i1 = v1;
+  return EM_RESULT_OK;
+}
+
+// ! Construct the new tupleN object.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param size Size of the object.
+ * \return The result.
+ */
+static inline em_result
+object_new_tupleN(object_t * out, size_t size) {
+  out->kind = EMFRP_OBJECT_TUPLEN;
+  out->value.tupleN.length = size;
+  return em_malloc((void **)(&(out->value.tupleN.data)), sizeof(object_t *) * size);
+}
+
+// Retrive ith of the given tuple.
+#define object_tuple_ith(obj, ith) (*((obj)->value.tupleN.data))[ith]
 
 // ! Printing the object.
 /* !

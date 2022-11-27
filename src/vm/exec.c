@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/28
+ * @date   2022/11/27
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -101,15 +101,71 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
 //exec_ast_unary(
 
 em_result
+exec_tuple(machine_t * m, parser_expression_t * v, object_t ** out) {
+  em_result errres;
+  parser_expression_tuple_list_t * li = &(v->value.tuple);
+  object_t * i0 = nullptr;
+  object_t * i1 = nullptr;
+  int tuple_len = 1;
+  while(li->next != nullptr) {
+    tuple_len++;
+    li = li->next;
+  }
+  li = &(v->value.tuple);
+  CHKERR(machine_alloc(m, out));
+  switch(tuple_len) {
+  case 1: {
+    CHKERR(exec_ast(m, li->value, &i0));
+    CHKERR(object_new_tuple1(*out, i0));
+    break;
+  }
+  case 2: {
+    CHKERR(exec_ast(m, li->value, &i0));
+    li = li->next;
+    CHKERR(exec_ast(m, li->value, &i1));
+    CHKERR(object_new_tuple2(*out, i0, i1));
+    break;
+  }
+  case 0:
+    DEBUGBREAK;
+    return EM_RESULT_INVALID_ARGUMENT;
+  default: {
+    int i; object_t * o;
+    CHKERR(object_new_tupleN(*out, tuple_len));
+    for(i = 0; i < tuple_len; ++i) {
+      errres = exec_ast(m, li->value,  &o);
+      if(EM_RESULT_OK != errres) goto err1;
+      object_tuple_ith(*out, i) = o;
+    }
+    goto end_switch;
+  err1:
+    for(int j = 0; j < i; ++j)
+      machine_return(m, object_tuple_ith(*out, j));
+    goto err;
+  }
+  }
+ end_switch:
+  return EM_RESULT_OK;
+ err:
+  if(*out != nullptr) {
+    machine_return(m, *out);
+    *out = nullptr;
+  }
+  if(i0 != nullptr) machine_return(m, i0);
+  if(i1 != nullptr) machine_return(m, i1);
+  return errres;
+}
+
+em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
-  if (EXPR_KIND_IS_INTEGER(v))
-    object_new_int(out, (int32_t)((size_t)v >> 1));
-  else if (EXPR_KIND_IS_BOOLEAN(v)) {
+  if (EXPR_KIND_IS_INTEGER(v)) {
+    CHKERR(object_new_int(out, (int32_t)((size_t)v >> 1)));
+  } else if (EXPR_KIND_IS_BOOLEAN(v))
     *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
-  } else if (EXPR_KIND_IS_BIN_OP(v)) {
-    CHKERR(exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out));
-  } else {
+  else if (EXPR_KIND_IS_BIN_OP(v))
+    return exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out);
+  else {
     switch(v->kind) {
     case EXPR_KIND_IF: {
       object_t * cond_result = nullptr;
@@ -132,6 +188,8 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       if(!machine_search_node(m, out, &(v->value.identifier)))
         return EM_RESULT_MISSING_IDENTIFIER;
       break;
+    case EXPR_KIND_TUPLE:
+      return exec_tuple(m, v, out);
     default:
       return EM_RESULT_INVALID_ARGUMENT;
     }
