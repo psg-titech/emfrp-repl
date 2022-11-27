@@ -94,15 +94,15 @@ void list_free(list_t ** self);
  */
 list_t * list_remove(list_t ** self, bool(comparer(void *, void *)), void * search_value);
 
-// ! Remove an item from the list.
+// ! Remove an item from the queue.
 /* !
- * /param self The list to remove from.
+ * /param self The queue to remove from.
  * /param comparer The compare function.
  * /param search_value An item to be removed(be passed to comparer as the 2nd argument).
  * /param undo Where the return value removed from.
  * /return The pointer to the removed list_t. If it is nullptr, there are no matched items.
  */
-list_t * list_remove2(list_t ** self, bool(comparer(void *, void *)), void * search_value, list_t *** undo);
+list_t * queue_remove(queue_t * self, bool(comparer(void *, void *)), void * search_value);
 
 // ! Default counstroctor of queue_t.
 /* !

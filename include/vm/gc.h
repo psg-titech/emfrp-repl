@@ -10,7 +10,7 @@
 #include "vm/object_t.h"
 
 // ! Size of objects.
-#define MEMORY_MANAGER_HEAP_SIZE 8//512
+#define MEMORY_MANAGER_HEAP_SIZE 512
 // ! When memory_manager_t::remaining is below this, the gc starts.
 #define MEMORY_MANAGER_GC_START_SIZE (MEMORY_MANAGER_HEAP_SIZE / 2)
 // ! Size of work list.

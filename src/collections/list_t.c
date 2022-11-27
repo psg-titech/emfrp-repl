@@ -2,7 +2,7 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/4
+ * @date   2022/11/27
  ------------------------------------------- */
 #include "collections/list_t.h"
 
@@ -82,12 +82,13 @@ list_remove(list_t ** self, bool(comparer(void *, void *)), void * search_value)
 }
 
 list_t *
-list_remove2(list_t ** self, bool(comparer(void *, void *)), void * search_value, list_t *** undo) {
-  list_t * cur = *self;
-  list_t ** delayptr = self;
+queue_remove(queue_t * self, bool(comparer(void *, void *)), void * search_value) {
+  list_t * cur = self->head;
+  list_t ** delayptr = &(self->head);
   while(cur != nullptr) {
     if(comparer(&(cur->value), search_value)) {
-      *undo = delayptr;
+      if(cur->next == nullptr)
+	self->last = delayptr;
       *delayptr = cur->next;
       cur->next = nullptr;
       return cur;
