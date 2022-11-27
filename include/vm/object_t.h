@@ -65,6 +65,8 @@ extern object_t object_true;
 extern object_t object_false;
 #define object_is_pointer(v) (((size_t)v & 3) == 0)
 
+#define object_kind(v) ((v)->kind & (-1 ^ 1))
+
 // ! Mark the object.
 /* !
  * \param self The object to be marked.
@@ -172,7 +174,7 @@ static inline em_result object_new_int(object_t ** out, int32_t v) {
  */
 static inline em_result
 object_new_tuple1(object_t * out, object_t * v) {
-  out->kind = EMFRP_OBJECT_TUPLE1;
+  out->kind = EMFRP_OBJECT_TUPLE1 | (out->kind & 1);
   out->value.tuple1.i0 = v;
   return EM_RESULT_OK;
 }
@@ -186,7 +188,7 @@ object_new_tuple1(object_t * out, object_t * v) {
  */
 static inline em_result
 object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
-  out->kind = EMFRP_OBJECT_TUPLE2;
+  out->kind = EMFRP_OBJECT_TUPLE2 | (out->kind & 1);
   out->value.tuple2.i0 = v0;
   out->value.tuple2.i1 = v1;
   return EM_RESULT_OK;
@@ -200,7 +202,7 @@ object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
  */
 static inline em_result
 object_new_tupleN(object_t * out, size_t size) {
-  out->kind = EMFRP_OBJECT_TUPLEN;
+  out->kind = EMFRP_OBJECT_TUPLEN | (out->kind & 1);
   out->value.tupleN.length = size;
   return em_malloc((void **)(&(out->value.tupleN.data)), sizeof(object_t *) * size);
 }

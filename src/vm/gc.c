@@ -8,8 +8,8 @@
 #include "vm/gc.h"
 #include "vm/machine.h"
 
-#define MARK_LIMIT 5
-#define SWEEP_LIMIT 5
+#define MARK_LIMIT 10
+#define SWEEP_LIMIT 10
 
 em_result
 memory_manager_new(memory_manager_t ** out) {
@@ -34,8 +34,10 @@ memory_manager_new(memory_manager_t ** out) {
 em_result
 push_worklist(memory_manager_t * self, object_t * obj) {
   if(!object_is_pointer(obj)) return EM_RESULT_OK;
+  if(obj == nullptr) return EM_RESULT_OK;
   if(object_is_marked(obj)) return EM_RESULT_OK;
   object_mark(obj);
+  //printf("marked: %d\n", ((int)obj - (int)self->space) / sizeof(object_t));
   if(MEMORY_MANAGER_WORK_LIST_SIZE == self->worklist_top)
     return EM_RESULT_GC_WORKLIST_OVERFLOW;
   self->worklist[self->worklist_top] = obj;
@@ -80,13 +82,16 @@ void
 memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
   for(int i = 0; i < sweep_limit; ++i) {
     if(self->sweeper >= MEMORY_MANAGER_HEAP_SIZE) break;
-    object_t * cur = self->worklist[self->sweeper];
-    if(object_is_marked(cur))
-      object_mark(cur);
-    else {
-      object_new_freelist(cur, self->freelist);
-      self->freelist = cur;
-      self->remaining++;
+    object_t * cur = &self->space[self->sweeper];
+    if(cur->kind != EMFRP_OBJECT_FREE) {
+      if(object_is_marked(cur))
+	object_unmark(cur);
+      else {
+	object_new_freelist(cur, self->freelist);
+	self->freelist = cur;
+	//printf("recycled: %d\n", ((int)cur - (int)self->space) / sizeof(object_t));
+	self->remaining++;
+      }
     }
     self->sweeper++;
   }
@@ -106,7 +111,8 @@ memory_manager_gc(struct machine_t * self,
 	void * v;
         FOREACH_LIST(v, li) {
           node_t * n = (node_t *)v;
-          CHKERR(memory_manager_push_worklist(mm, n->value));
+	  //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
+          CHKERR(push_worklist(mm, n->value));
         }
       }
       mm->state = MEMORY_MANAGER_STATE_MARK;
@@ -139,6 +145,11 @@ memory_manager_alloc(machine_t * self, object_t ** o) {
   self->memory_manager->remaining--;
   *o = self->memory_manager->freelist;
   self->memory_manager->freelist = (*o)->value.free.next;
+  (*o)->kind = 0;
+  if(self->memory_manager->state == MEMORY_MANAGER_STATE_SWEEP &&
+     &(self->memory_manager->space[self->memory_manager->sweeper]) <= *o)
+    object_mark(*o);
+  //printf("allocated: %d\n", ((int)*o - (int)self->memory_manager->space) / sizeof(object_t));
   return EM_RESULT_OK;
  err:
   return errres;

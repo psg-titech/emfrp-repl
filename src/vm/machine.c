@@ -96,7 +96,7 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
     em_result reason;
     list_t * /*<node_t *> */ revert = list_remove(&(self->execution_list.head), string_compare2, &str);
     if (&revert->next == self->execution_list.last)
-        self->execution_list.last = &self->execution_list.head;
+      self->execution_list.last = &self->execution_list.head;
     em_free(revert);
     reason = check_dependencies(prog, &self->execution_list.head, &whereto_insert);
     if(reason != EM_RESULT_OK)

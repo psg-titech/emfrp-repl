@@ -21,7 +21,7 @@ object_print(object_t * v) {
   else if(v == &object_false)
     printf("false");
   else {
-    switch(v->kind) {
+    switch(object_kind(v)) {
     case EMFRP_OBJECT_STRING: printf("\"%s\"",v->value.string.value.buffer); break;
     case EMFRP_OBJECT_TUPLE1:
       printf("(");

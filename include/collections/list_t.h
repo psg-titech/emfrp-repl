@@ -147,4 +147,4 @@ em_result queue_dequeue(queue_t * self, size_t value_size, void * out);
 em_result queue_add_head(queue_t * out, size_t value_size, void * value);
 #define queue_add_head2(self, ty, out) queue_add_head(self, sizeof(ty), out)
 
-#define FOREACH_LIST(v, li) if(li!=nullptr)for(v = &(li->value); !LIST_IS_EMPTY(&li); li = li->next)
+#define FOREACH_LIST(v, li) if(li!=nullptr)for(v = &(li->value); !LIST_IS_EMPTY(&li); li = LIST_NEXT(li), v = &(li->value))
