@@ -136,6 +136,7 @@ exec_tuple(machine_t * m, parser_expression_t * v, object_t ** out) {
       errres = exec_ast(m, li->value,  &o);
       if(EM_RESULT_OK != errres) goto err1;
       object_tuple_ith(*out, i) = o;
+      li = li->next;
     }
     goto end_switch;
   err1:

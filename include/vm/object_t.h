@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/27
+ * @date   2022/11/29
  ------------------------------------------- */
 
 #pragma once
@@ -55,7 +55,7 @@ typedef struct object_t {
     // ! used on tuple 2.
     struct{ struct object_t * i0; struct object_t * i1; } tuple2;
     // ! used on tuple N.
-    struct{ size_t length; struct object_t *** data; } tupleN;
+    struct{ size_t length; struct object_t ** data; } tupleN;
   } value;
 } object_t;
 
@@ -208,7 +208,7 @@ object_new_tupleN(object_t * out, size_t size) {
 }
 
 // Retrive ith of the given tuple.
-#define object_tuple_ith(obj, ith) (*((obj)->value.tupleN.data))[ith]
+#define object_tuple_ith(obj, ith) (((obj)->value.tupleN.data))[ith]
 
 // ! Printing the object.
 /* !
