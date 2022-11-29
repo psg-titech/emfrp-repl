@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/27
+ * @date   2022/11/29
  ------------------------------------------- */
 #include "emmem.h"
 #include "vm/gc.h"
@@ -72,6 +72,9 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
       for(size_t i = 0; i < cur->value.tupleN.length; ++i)
 	CHKERR(push_worklist(self, object_tuple_ith(cur, i)));
       break;
+    case EMFRP_OBJECT_FREE:
+    case EMFRP_OBJECT_STRING:
+    case EMFRP_OBJECT_SYMBOL: break;
     }
   }
  err:

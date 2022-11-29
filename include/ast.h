@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/25
+ * @date   2022/11/29
  ------------------------------------------- */
 
 #pragma once
@@ -258,6 +258,7 @@ parser_expression_new_tuple(parser_expression_t * inner) {
   ret->kind = EXPR_KIND_TUPLE;
   ret->value.tuple.next = nullptr;
   ret->value.tuple.value = inner;
+  return ret;
 }
 
 // ! Prepend to the tuple expression.
