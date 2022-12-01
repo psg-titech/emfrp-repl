@@ -2,7 +2,7 @@
  * @file   gc.h
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/27
+ * @date   2022/12/1
  ------------------------------------------- */
 
 #pragma once
@@ -53,6 +53,7 @@ typedef struct memory_manager_t {
  * /return The result(may return from em_malloc.)
  */
 em_result memory_manager_push_worklist(memory_manager_t * self, object_t * obj);
+#define machine_mark_gray(self, obj) memory_manager_push_worklist((self)->memory_manager, obj)
 
 // ! Allocating and newing  memory_manager_t.
 /* !

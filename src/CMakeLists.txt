@@ -6,6 +6,7 @@ function(set_source prefix)
         ${prefix}/src/ast.c
         ${prefix}/src/vm/object_t.c
         ${prefix}/src/vm/exec.c
+	${prefix}/src/vm/exec_sequence_t.c
         ${prefix}/src/vm/machine.c
         ${prefix}/src/vm/node_t.c
 	${prefix}/src/vm/gc.c

@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/14
+ * @date   2022/12/1
  ------------------------------------------- */
 
 #pragma once
@@ -13,6 +13,7 @@
 #include "vm/node_t.h"
 #include "vm/object_t.h"
 #include "vm/gc.h"
+#include "vm/exec_sequence_t.h"
 
 // ! Virtual Machine.
 typedef struct machine_t {
@@ -21,17 +22,12 @@ typedef struct machine_t {
    * Items are the pointer to the nodes' content.
    * They references machine_t::nodes;
    */
-  queue_t /*<node_t*>*/ execution_list;
+  queue_t /*<exec_sequence_t*>*/ execution_list;
   // ! The details of nodes.
   /* !
    * Items are the node(not pointer).
    */
   dictionary_t /*<node_t>*/ nodes;
-  // ! The name of an executing node.
-  /* !
-   * If the machine is not currently executing any ndoes, it must be nullptr.
-   */
-  string_t * executing_node_name;
   // ! The memory manager.
   memory_manager_t * memory_manager;
 } machine_t;
@@ -60,7 +56,7 @@ em_result machine_add_node_ast(machine_t * self, string_t str, parser_expression
  * \param callback The callback of node. (Nullable)
  * \return The status code
  */
-em_result machine_add_node_callback(machine_t * self, string_t str, node_callback_t callback);
+em_result machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callback);
 
 // ! Search value of the node.
 /* !
