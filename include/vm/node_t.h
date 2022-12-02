@@ -2,7 +2,7 @@
  * @file   node_t.h
  * @brief  Emfrp Node Definition(IR)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2022/12/2
  ------------------------------------------- */
 #pragma once
 #include "ast.h"
@@ -17,6 +17,8 @@ typedef struct node_t {
   string_t name;
   // ! Value of node.
   object_t * value;
+  // ! Value of node@lst.
+  object_t * last;
   // ! The action when the value is changed.
   node_event_delegate_t action;
 } node_t;
@@ -27,9 +29,11 @@ typedef struct node_t {
  * \param name The name
  * \return The status code
  */
-static inline em_result node_new(node_t * out, string_t name) {
+static inline em_result
+node_new(node_t * out, string_t name) {
   out->name = name;
   out->value = nullptr;
+  out->last = nullptr;
   out->action = nullptr;
   return EM_RESULT_OK;
 }

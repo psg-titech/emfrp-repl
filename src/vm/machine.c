@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2022/12/2
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -171,12 +171,8 @@ machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callba
 }
 
 bool
-machine_search_node(machine_t * self, object_t ** out, string_t * name) {
-  node_t * o;
-  if(!dictionary_get(&(self->nodes), (void**)&o, node_hasher, node_compare, name))
-    return false;
-  *out = o->value;
-  return true;
+machine_lookup_node(machine_t * self, node_t ** out, string_t * name) {
+  return dictionary_get(&(self->nodes), (void**)out, node_hasher, node_compare, name);
 }
 
 bool
@@ -188,7 +184,14 @@ em_result
 machine_indicate(machine_t * self, string_t * names, int count_names) {
   // names is currently ignored. i.e. All of nodes are executed.
   em_result errres;
-  list_t * /*<exec_sequence_t>*/ cur = self->execution_list.head;
+  list_t * /*<exec_sequence_t>*/ cur;
+  cur = self->execution_list.head;
+  while(!LIST_IS_EMPTY(&cur)) {
+    exec_sequence_t * es = (exec_sequence_t *)(&(cur->value));
+    CHKERR(exec_sequence_update_last(self, es));
+    cur = LIST_NEXT(cur);
+  }
+  cur = self->execution_list.head;
   while(!LIST_IS_EMPTY(&cur)) {
     exec_sequence_t * es = (exec_sequence_t *)(&(cur->value));
     em_result result = exec_sequence_update_value(self, es);
@@ -202,10 +205,15 @@ machine_indicate(machine_t * self, string_t * names, int count_names) {
 em_result
 machine_set_value_of_node(machine_t * self, string_t * name, object_t * val) {
   node_t * o = nullptr;
+  em_result errres;
   if (!dictionary_get(&(self->nodes), (void **)&o, string_hasher, node_compare, name))
       return EM_RESULT_MISSING_IDENTIFIER;
+  CHKERR(machine_mark_gray(self, o->last));
+  o->last = o->value;
   o->value = val;
   return EM_RESULT_OK;
+ err:
+  return errres;
 }
 
 em_result

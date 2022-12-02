@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2022/12/2
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
@@ -75,6 +75,7 @@ exec_sequence_new_mono_ast(exec_sequence_t * out, parser_expression_t * ast, nod
  * \param out The result
  * \param callback The program(callback)
  * \param value The node to update.
+ * \param The status result
  */
 static inline em_result
 exec_sequence_new_mono_callback(exec_sequence_t * out, exec_callback_t callback, node_t * value) {
@@ -85,5 +86,20 @@ exec_sequence_new_mono_callback(exec_sequence_t * out, exec_callback_t callback,
   return EM_RESULT_OK;
 }
 
+// ! Update the value of nodes.
+/* !
+ * \param machine The machine to execute the program.
+ * \param self The exec_sequence_t contining the program to be executed and the nodes to be updated.
+ * \return The result
+ */
 em_result
-exec_sequence_update_value(struct machine_t * machine, exec_sequence_t * es);
+exec_sequence_update_value(struct machine_t * machine, exec_sequence_t * self);
+
+// ! Assign node_t::last := node_t::value.
+/* !
+ * \param machine The machine. It is used for GC.
+ * \param self The exec_sequence_t containing the nodes to be updated.
+ * \return The result
+ */
+em_result
+exec_sequence_update_last(struct machine_t * machine, exec_sequence_t * self);

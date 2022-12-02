@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2022/12/2
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -160,6 +160,7 @@ exec_tuple(machine_t * m, parser_expression_t * v, object_t ** out) {
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
+  node_t * id;
   if (EXPR_KIND_IS_INTEGER(v)) {
     CHKERR(object_new_int(out, (int32_t)((size_t)v >> 1)));
   } else if (EXPR_KIND_IS_BOOLEAN(v))
@@ -178,12 +179,14 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       break;
     }
     case EXPR_KIND_IDENTIFIER:
-      if(!machine_search_node(m, out, &(v->value.identifier)))
+      if(!machine_lookup_node(m, &id, &(v->value.identifier)))        
         return EM_RESULT_MISSING_IDENTIFIER;
+      *out = id->value;
       break;
     case EXPR_KIND_LAST_IDENTIFIER:
-      if(!machine_search_node(m, out, &(v->value.identifier)))
+      if(!machine_lookup_node(m, &id, &(v->value.identifier)))
         return EM_RESULT_MISSING_IDENTIFIER;
+      *out = id->last;
       break;
     case EXPR_KIND_TUPLE:
       return exec_tuple(m, v, out);

@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2022/12/2
  ------------------------------------------- */
 
 #pragma once
@@ -65,7 +65,7 @@ em_result machine_add_node_callback(machine_t * self, string_t str, exec_callbac
  * \param name Name of the node
  * \return Whether found or not
  */
-bool machine_search_node(machine_t * self, object_t ** out, string_t * name);
+bool machine_lookup_node(machine_t * self, node_t ** out, string_t * name);
 
 // ! Is the node defined?
 /* !
