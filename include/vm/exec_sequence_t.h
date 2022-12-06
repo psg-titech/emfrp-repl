@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/2
+ * @date   2022/12/6
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
@@ -12,6 +12,21 @@
 
 typedef object_t * (*exec_callback_t)(void);
 struct machine_t;
+
+typedef enum node_or_tuple_t_kind {
+  NODE_OR_TUPLE_NONE,
+  NODE_OR_TUPLE_NODE,
+  NODE_OR_TUPLE_TUPLE
+} node_or_tuple_t_kind;
+
+// ! type node_or_tuple = Node of Node | Tuple of arrayList<node_or_tuple>
+typedef struct node_or_tuple_t {
+  node_or_tuple_t_kind kind;
+  union{
+    node_t * node;
+    arraylist_t /*<node_or_tuple_t>*/ tuple;
+  } value;
+} node_or_tuple_t;
 
 // ! Program kind of node.
 typedef enum exec_sequence_program_kind {
@@ -38,7 +53,7 @@ typedef struct exec_sequence_t {
   // Mono node definition or 'as' defined node. Nullable.
   node_t * node_definition;
   // Multiple node definitions. Nullable.
-  arraylist_t * /*<node_t *>*/ node_definitions;
+  node_or_tuple_t * /*<node_t *>*/ node_definitions;
 } exec_sequence_t;
 
 // ! Constructor of exec_sequence_t.
@@ -83,6 +98,23 @@ exec_sequence_new_mono_callback(exec_sequence_t * out, exec_callback_t callback,
   out->program.callback = callback;
   out->node_definition = value;
   out->node_definitions = nullptr;
+  return EM_RESULT_OK;
+}
+
+// ! Constructor of exec_sequence_t.
+/* !
+ * \param out The result
+ * \param callback The program(callback)
+ * \param as_value The node (`as` declaration) to update.
+ * \param value The nodes to update.
+ * \param The status result
+ */
+static inline em_result
+exec_sequence_new_multi_callback(exec_sequence_t * out, exec_callback_t callback, node_t * as_value, node_or_tuple_t * value) {
+  out->program_kind = EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK;
+  out->program.callback = callback;
+  out->node_definition = as_value;
+  out->node_definitions = value;
   return EM_RESULT_OK;
 }
 

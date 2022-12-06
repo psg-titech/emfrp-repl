@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/2
+ * @date   2022/12/6
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -35,12 +35,30 @@ bool
 string_compare2(void * l, void * r) {  return string_compare(*((string_t **)l), (string_t *)r); }
 void
 node_cleaner(void * v) { node_deep_free((node_t *)v);}
+// Hit only erasable.
 bool
 exec_sequence_node_ptr_compare(void * l/*pointer of exec_sequence_t*/, void * r /*pointer of node_t * */) {
   exec_sequence_t * exec_seq = (exec_sequence_t *)l;
   node_t ** n = (node_t **)r;
-  if(exec_seq->node_definition == *n) return true;
+  if(exec_seq->node_definition == *n) return exec_seq->node_definitions == nullptr;
   return false;
+}
+void
+go_check_dependencies(list_t ** dependencies, node_or_tuple_t nt) {
+  switch(nt.kind) {
+  NODE_OR_TUPLE_NONE: return;
+  NODE_OR_TUPLE_NODE: {
+      list_t * removed;
+      string_t * n = &(nt.value.node->name);
+      while((removed = list_remove(dependencies, string_compare2, n)) != nullptr)
+	em_free(removed);
+      return;
+    }
+  NODE_OR_TUPLE_TUPLE:
+    for(int i = 0; i < nt.value.tuple.length; ++i)
+      go_check_dependencies(dependencies, ((node_or_tuple_t *)(nt.value.tuple.buffer))[i]);
+    return;
+  }
 }
 
 em_result
@@ -62,6 +80,8 @@ check_dependencies(parser_expression_t * prog, list_t ** executionlist_head, lis
     exec_sequence_t * n = (exec_sequence_t *)(&(cur->value));
     while((removed = list_remove(&dependencies, string_compare2, &(n->node_definition->name))) != nullptr)
       em_free(removed);
+    if(n->node_definitions != nullptr)
+      go_check_dependencies(&dependencies, *(n->node_definitions));
     p = &((*p)->next);
     cur = LIST_NEXT(cur);
   }
@@ -103,7 +123,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
   if(!dictionary_get(&(self->nodes), (void**)&node_ptr, string_hasher, node_compare, &str)) { // If not already defined.
     CHKERR(check_dependencies(prog, &(self->execution_list.head), &whereto_insert));
     CHKERR(machine_add_node(self, str, &node_ptr));
-    printf("OK!\n");
     CHKERR(exec_sequence_new_mono_ast(&new_exec_seq, prog, node_ptr));
     CHKERR(queue_enqueue2(&(self->execution_list), exec_sequence_t, &new_exec_seq));
   } else {  
@@ -123,7 +142,6 @@ machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog,
       self->execution_list.last = &((*whereto_insert)->next);
     goto end;
 err2: // REVERTING
-    
     if (es->program_kind == EXEC_SEQUENCE_PROGRAM_KIND_AST) {
       CHKERR(check_dependencies(es->program.ast, &self->execution_list.head, &whereto_insert));
       // Cyclic Reference Checking is skipped.
