@@ -2,31 +2,15 @@
 A REPL implementation of Emfrp, running on low power devices.
 
 # Requirements
-## Windows
 This is the tested environment.
-
- * Visual Studio 2019, 2022
- * Windows 10, 11
-
-## DragonFly
-This is the tested environment.
-Cannot compile for ESP32.
-
+ * Windows 10 or 11
+   * Visual Studio 2019 or 2022 (Maybe compatible for 2013, 2015, and 2017)
  * DragonFly 6.2.2
- * gcc 8.3
-
-## HaikuOS
-This is the tested environment.
-Cannot compile for ESP32.
-
+   * gcc 8.3 (also clang)
  * Haiku R1/beta hrev55181+67
- * gcc 11.2
-
-## macOS
-This is the tested environment.
-
- * macOS 12.6 Monterey
- * MacBook Air (M1, 2020)
+   * gcc 11.2
+ * macOS 13 Ventura
+   * MacBook Air (M1, 2020)
 
 # How to build
 ## How to build for own devices
@@ -61,10 +45,8 @@ This is the tested environment.
 1. Execute `project/common/setup-macos-brew.sh` as privilaged user.
 2. Execute the Makefile in `packcc/build/clang`.
 3. Open `project/pc/`.
-4. `$ mkdir build`
-5. `$ cd build`
-6. `$ cmake ..`
-7. `$ make`
+6. `$ cmake -B build`
+7. `$ make` in the build directory.
 8. `$ ./emfrp-repl`
 
 ### GUI Emfrp-REPL
