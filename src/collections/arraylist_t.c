@@ -2,7 +2,7 @@
  * @file   arraylist_t.c
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/4
+ * @date   2022/12/12
  ------------------------------------------- */
 #include "collections/arraylist_t.h"
 
@@ -15,13 +15,17 @@ arraylist_default(arraylist_t * out) {
 
 em_result
 arraylist_resize(arraylist_t * self, size_t item_size) {
+  em_result errres = EM_RESULT_OK;
   int new_len = self->length + 16;
-  void * new_buf = em_reallocarray(self->buffer, new_len, item_size);
+  void * new_buf = nullptr;
+  CHKERR(em_reallocarray(&new_buf, self->buffer, new_len, item_size));
   if(new_buf == nullptr)
     return EM_RESULT_OUT_OF_MEMORY;
   self->buffer = new_buf;
   self->capacity = new_len;
-  return EM_RESULT_OK;
+  //return EM_RESULT_OK;
+ err:
+  return errres;
 }
 
 em_result
@@ -110,5 +114,6 @@ arraylist_set(arraylist_t * self, size_t index, size_t item_size, void * value) 
 void
 arraylist_free(arraylist_t * self) {
   em_free(self->buffer);
-  em_free(self);
+  self->buffer == nullptr;
+  self->length = 0;
 }

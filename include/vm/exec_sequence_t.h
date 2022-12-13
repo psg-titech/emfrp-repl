@@ -28,14 +28,31 @@ typedef struct node_or_tuple_t {
   } value;
 } node_or_tuple_t;
 
+#define EXEC_SEQUENCE_PROGRAM_KIND_SHIFT 3
+#define exec_sequence_program_kind(v) ((v)->program_kind & (~7))
+#define exec_sequence_mark_phantom(v) ((v)->program_kind |= 1)
+#define exec_sequence_unmark_phantom(v) ((v)->program_kind &= (~1))
+#define exec_sequence_marked_phantom(v) (((v)->program_kind & 1) == 1)
+#define exec_sequence_mark_modified(v) ((v)->program_kind |= 2)
+#define exec_sequence_unmark_modified(v) ((v)->program_kind &= (~2))
+#define exec_sequence_marked_modified(v) (((v)->program_kind & 2) != 0)
+#define exec_sequence_mark_lastfailed(v) ((v)->program_kind |= 4)
+#define exec_sequence_unmark_lastfailed(v) ((v)->program_kind &= (~4))
+#define exec_sequence_marked_lsatfailed(v) (((v)->program_kind & 4) != 0)
+
 // ! Program kind of node.
+/* !
+ * LSB represents `phantom`, which is created before verification.
+ * LSB + 1 represents `modified`, whose defined_nodes are written into the journal.
+ * LSB + 2 represents `last failed`, which failed at the last time.
+ */
 typedef enum exec_sequence_program_kind {
   // ! no program.(it may be updated via emfrp_indicate_node_update.)
-  EXEC_SEQUENCE_PROGRAM_KIND_NOTHING,
+  EXEC_SEQUENCE_PROGRAM_KIND_NOTHING = 1 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
   // ! containing AST.
-  EXEC_SEQUENCE_PROGRAM_KIND_AST,
+  EXEC_SEQUENCE_PROGRAM_KIND_AST = 2 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
   // ! containing callback.
-  EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK
+  EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK = 3 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
 } exec_sequence_program_kind;
 
 typedef struct exec_sequence_t {
@@ -118,6 +135,16 @@ exec_sequence_new_multi_callback(exec_sequence_t * out, exec_callback_t callback
   return EM_RESULT_OK;
 }
 
+// ! Assign the object.
+/* !
+ * \param machine The machine to execute the program.
+ * \param self The exec_sequence_t contining the program to be executed and the nodes to be updated.
+ * \param obj The object.
+ * \return The result
+ */
+em_result
+exec_sequence_update_value_given_object(struct machine_t * machine, exec_sequence_t * self, object_t * obj);
+
 // ! Update the value of nodes.
 /* !
  * \param machine The machine to execute the program.
@@ -135,3 +162,19 @@ exec_sequence_update_value(struct machine_t * machine, exec_sequence_t * self);
  */
 em_result
 exec_sequence_update_last(struct machine_t * machine, exec_sequence_t * self);
+
+// ! Compact the exec_sequence.
+/* !
+ * \param es The exec_sequence.
+ * \return Now, es can be freed (true) or not (false).
+ */
+bool
+exec_sequence_compact(exec_sequence_t * es);
+
+// ! Freeing the exec_sequence. In this method, it does not call em_free(es);
+void
+exec_sequence_free(exec_sequence_t * es);
+
+// ! Print out the given node_or_tuple_t.
+void
+node_or_tuple_debug_print(node_or_tuple_t * nt);
