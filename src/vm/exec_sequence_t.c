@@ -50,9 +50,10 @@ exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t * nt, object_t * v)
   }
   case NODE_OR_TUPLE_TUPLE: {
     arraylist_t /* <node_or_tuple_t> */ * al = &(nt->value.tuple);
+    if(al->length == 0) return EM_RESULT_TYPE_MISMATCH;
     if(al->length == 1) {
       if(!object_is_pointer(v) || object_kind(v) != EMFRP_OBJECT_TUPLE1) {
-	exec_sequence_set_nil(machine, &(((node_or_tuple_t *)(al->buffer))[0]));
+	exec_sequence_set_nil(machine, nt);
         return EM_RESULT_TYPE_MISMATCH;
       }
       return exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[0]), v->value.tuple1.i0);
@@ -69,7 +70,7 @@ exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t * nt, object_t * v)
         return EM_RESULT_TYPE_MISMATCH;
       }
       em_result ret = 0;
-      for(int i = 0; i , al->length; ++i) {
+      for(int i = 0; i < al->length; ++i) {
 	ret |= exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[i]), object_tuple_ith(v, i));
       }
       return ret != 0 ? EM_RESULT_TYPE_MISMATCH : EM_RESULT_OK; // TODO : improve it.
