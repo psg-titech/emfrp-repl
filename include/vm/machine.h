@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/2
+ * @date   2022/12/14
  ------------------------------------------- */
 
 #pragma once
@@ -42,12 +42,10 @@ em_result machine_new(machine_t * out);
 // ! Add a node(with an AST program).
 /* !
  * \param self The machine
- * \param str Name of the node
- * \param prog Program of the node
- * \param initialization The initialization value, not freed, please free by the caller.
+ * \param n The AST of the node.
  * \return The status code
  */
-em_result machine_add_node_ast(machine_t * self, string_t str, parser_expression_t * prog, parser_expression_t * initialization);
+em_result machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n);
 
 // ! Add a node(a input node).
 /* !

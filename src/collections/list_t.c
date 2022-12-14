@@ -2,7 +2,7 @@
  * @file   list_t.c
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/27
+ * @date   2022/12/14
  ------------------------------------------- */
 #include "collections/list_t.h"
 
@@ -108,6 +108,20 @@ queue_enqueue(queue_t * out, size_t value_size, void * value) {
   ret->next = nullptr;
   memcpy(&(ret->value), value, value_size);
   *(out->last) = ret;
+  out->last = &(ret->next);
+  return EM_RESULT_OK;
+}
+
+em_result
+queue_enqueue3(queue_t * out, size_t value_size, void * value, void ** entry_ptr) {
+  list_t * ret = nullptr;
+  em_result err = em_malloc((void **)&ret, sizeof(list_t *) + value_size);
+  if(err != EM_RESULT_OK)
+    return err;
+  ret->next = nullptr;
+  memcpy(&(ret->value), value, value_size);
+  *(out->last) = ret;
+  *entry_ptr = &(ret->value);
   out->last = &(ret->next);
   return EM_RESULT_OK;
 }

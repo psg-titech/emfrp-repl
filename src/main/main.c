@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/22
+ * @date   2022/12/14
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -11,6 +11,7 @@
 #include "ast.h"
 #include "vm/machine.h"
 #include "vm/exec.h"
+#include "vm/exec_sequence_t.h"
 int main(void) {
   string_t line;
   parser_reader_t parser_reader;
@@ -27,30 +28,28 @@ int main(void) {
     parser_reader_new(&parser_reader, &line);
     parser_context_t *ctx = parser_create(&parser_reader);
     if(!parser_parse(ctx, (void **)&parsed_node)) {
+      exec_sequence_t * es;
       parser_node_print(parsed_node);
-      em_result res = machine_add_node_ast(&m, parsed_node->name, parsed_node->expression, parsed_node->init_expression);
+      em_result res = machine_add_node_ast(&m, &es, parsed_node);
       if(res != EM_RESULT_OK) {
-	printf("add node failure: %s\n", EM_RESULT_STR_TABLE[res]);
+	printf("add node failure(%d): %s\n", res, EM_RESULT_STR_TABLE[res]);
+	parser_node_free_deep(parsed_node);
 	goto freeing;
       }
       res = exec_ast(&m, parsed_node->expression,  &result_object);
-      // We have to think parsed_node->name is freed or not.
-      if (parsed_node->init_expression == nullptr)
-        machine_set_value_of_node(&m, &(parsed_node->name), result_object);
-      else
-        object_free(result_object);
-      if(res != EM_RESULT_OK)
+      // We have to think free_deep or free_shallow.
+      if(res != EM_RESULT_OK) {
 	printf("%s\n", EM_RESULT_STR_TABLE[res]);
-      else {
+	parser_node_free_deep(parsed_node);
+      } else {
+	exec_sequence_update_value_given_object(&m, es, result_object);
+	parser_node_free_shallow(parsed_node);
 	printf("OK, ");
 	object_print(result_object);
 	printf("\n");
       }
     freeing:
       machine_debug_print_definitions(&m);
-      if(parsed_node->init_expression != nullptr)
-	parser_expression_free(parsed_node->init_expression);
-      em_free(parsed_node);
     }
     parser_destroy(ctx);
   }

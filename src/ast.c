@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/25
+ * @date   2022/12/14
  ------------------------------------------- */
 
 #include "ast.h"
@@ -15,8 +15,79 @@ const char * const binary_op_table[] = {
 };
 
 void
+string_or_tuple_free_shallow(string_or_tuple_t * st) {
+  if(!(st->isString))
+    for(list_t * li = st->value.tuple; li != nullptr; ) {
+      string_or_tuple_free_shallow((string_or_tuple_t*)(&(li->value)));
+      list_t * ne = LIST_NEXT(li);
+      free(li);
+      li = ne;
+    }
+}
+
+void
+string_or_tuple_free_deep(string_or_tuple_t * st) {
+  if(st->isString)
+    string_free(st->value.string);
+  else
+    for(list_t * li = st->value.tuple; li != nullptr; ) {
+      string_or_tuple_free_deep((string_or_tuple_t*)(&(li->value)));
+      list_t * ne = LIST_NEXT(li);
+      free(li);
+      li = ne;
+    }
+}
+
+void
+parser_node_free_shallow(parser_node_t * pn) {
+  string_or_tuple_free_shallow(&(pn->name));
+  parser_expression_free(pn->init_expression);
+  free(pn);
+}
+
+void
+parser_node_free_deep(parser_node_t * pn) {
+  string_or_tuple_free_deep(&(pn->name));
+  if(pn->as != nullptr) {
+    string_free(pn->as);
+    em_free(pn->as);
+  }
+  parser_expression_free(pn->expression);
+  if(pn->init_expression != nullptr) parser_expression_free(pn->init_expression);
+  free(pn);
+}
+
+void
+go_node_name_print(list_t * li) {
+  printf("(");
+  string_or_tuple_t * st = (string_or_tuple_t *)(&(li->value));
+  if(st->isString)
+    printf("%s", st->value.string->buffer);
+  else
+    go_node_name_print(st->value.tuple);
+  
+  for(li = LIST_NEXT(li); li != nullptr; li = LIST_NEXT(li)) {
+    printf(", ");
+    st = (string_or_tuple_t *)(&(li->value));
+    if(st->isString)
+      printf("%s", st->value.string->buffer);
+    else
+      go_node_name_print(st->value.tuple);
+  }
+  printf(")");
+}
+
+void
 parser_node_print(parser_node_t * n) {
-  printf("node %s = ", n->name.buffer);
+  if(n->name.isString) {
+    printf("node %s = ", n->name.value.string->buffer);
+  } else {
+    printf("node ");
+    go_node_name_print(n->name.value.tuple);
+    if(n->as != nullptr)
+      printf(" as %s", n->as->buffer);
+    printf(" = ");
+  }
   parser_expression_print(n->expression);
   printf("\n");
 }

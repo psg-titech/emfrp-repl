@@ -2,7 +2,7 @@
  * @file   list_t.h
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/24
+ * @date   2022/12/14
  ------------------------------------------- */
 #pragma once
 #include "emmem.h"
@@ -55,7 +55,7 @@ em_result list_add(list_t ** out, size_t value_size, void * value);
  * /return The status code
  */
 em_result list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr);
-
+#define list_add4(out, ty, val, entry_ptr) list_add3(out, sizeof(ty), val, entry_ptr)
 
 // ! Search an item.
 /* !
@@ -126,6 +126,17 @@ static inline em_result queue_default(queue_t * out) {
  */
 em_result queue_enqueue(queue_t * out, size_t value_size, void * value);
 #define queue_enqueue2(out, ty, val) queue_enqueue(out, sizeof(ty), val)
+
+// ! Enqueue
+/* !
+ * /param out The queue to add to
+ * /param value_size sizeof(value)
+ * /param value The value to be added
+ * /param entry_ptr The pointer of copied buffer
+ * /return The status code
+ */
+em_result queue_enqueue3(queue_t * out, size_t value_size, void * value, void ** entry_ptr);
+#define queue_enqueue4(out, ty, val, entry_ptr) queue_enqueue(out, sizeof(ty), val, entry_ptr)
 
 // ! Dequeue
 /* !

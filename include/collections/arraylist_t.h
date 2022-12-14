@@ -2,7 +2,7 @@
  * @file   arraylist_t.h
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/4
+ * @date   2022/12/14
  ------------------------------------------- */
 #pragma once
 
@@ -25,6 +25,20 @@ typedef struct arraylist_t {
 
 // ! Zeroing arraylist_t
 void arraylist_default(arraylist_t * out);
+
+// ! Construct arraylist_t
+/* !
+ * /param out The result
+ * /param nmemb The count of elements.
+ * /param size The size of a element.
+ * /return The status code. May be OUT_OF_MEMORY.
+ */
+static inline em_result
+arraylist_new(arraylist_t * out, size_t nmemb, size_t size) {
+  out->length = size;
+  out->capacity = size;
+  return em_allocarray(&(out->buffer), nmemb, size);
+}
 
 // ! Append an item to the array list.
 /* !

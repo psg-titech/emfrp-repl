@@ -2,7 +2,7 @@
  * @file   object_t.c
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/27
+ * @date   2022/12/14
  ------------------------------------------- */
 #include "vm/object_t.h"
 #include <stdio.h>
@@ -14,7 +14,9 @@ object_t object_false;
 
 void
 object_print(object_t * v) {
-  if(object_is_integer(v))
+  if (v == nullptr)
+    printf("NIL");
+  else if(object_is_integer(v))
     printf("%d", object_get_integer(v));
   else if(v == &object_true)
     printf("true");

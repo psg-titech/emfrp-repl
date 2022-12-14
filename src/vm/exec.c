@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/2
+ * @date   2022/12/14
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -218,9 +218,9 @@ get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
 bool
 check_depends_on_ast(parser_expression_t * v, string_t * str) {
   if (EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return false;
-  if(v->kind == EXPR_KIND_IDENTIFIER)
+  if(v->kind == EXPR_KIND_IDENTIFIER) {
     return string_compare(&(v->value.identifier), str);
-  else if(EXPR_KIND_IS_BIN_OP(v))
+  } else if(EXPR_KIND_IS_BIN_OP(v))
     return check_depends_on_ast(v->value.binary.lhs, str) || check_depends_on_ast(v->value.binary.rhs, str);
   return false;
 }

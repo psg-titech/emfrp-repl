@@ -1,21 +1,20 @@
-
 /** -------------------------------------------
  * @file   exec_sequence_t.c
  * @brief  Execution Sequence.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/13
+ * @date   2022/12/14
  ------------------------------------------- */
 #include "vm/exec_sequence_t.h"
 #include "vm/exec.h"
 #include "vm/gc.h"
 
 em_result
-exec_sequence_set_nil(machine_t * machine, node_or_tuple_t nt) {
+exec_sequence_set_nil(machine_t * machine, node_or_tuple_t * nt) {
   em_result errres = EM_RESULT_OK;
-  switch(nt.kind) {
+  switch(nt->kind) {
   case NODE_OR_TUPLE_NONE: return EM_RESULT_OK;
   case NODE_OR_TUPLE_NODE: {
-    node_t * n = nt.value.node;
+    node_t * n = nt->value.node;
     CHKERR(machine_mark_gray(machine, n->value));
     n->value = nullptr;
     if(n->action != nullptr)
@@ -23,9 +22,9 @@ exec_sequence_set_nil(machine_t * machine, node_or_tuple_t nt) {
     break;
   }
   case NODE_OR_TUPLE_TUPLE: {
-    arraylist_t /* <node_or_tuple_t> */ * al = &nt.value.tuple;
+    arraylist_t /* <node_or_tuple_t> */ * al = &(nt->value.tuple);
     for(int i = 0; i < al->length; ++i)
-      CHKERR(exec_sequence_set_nil(machine, ((node_or_tuple_t *)(al->buffer))[i]));
+      CHKERR(exec_sequence_set_nil(machine, &(((node_or_tuple_t *)(al->buffer))[i])));
     break;
   }
   }
@@ -35,13 +34,13 @@ exec_sequence_set_nil(machine_t * machine, node_or_tuple_t nt) {
 }
 
 em_result
-exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t nt, object_t * v) {
+exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t * nt, object_t * v) {
   em_result errres;
   if(v == nullptr) return exec_sequence_set_nil(machine, nt);
-  switch(nt.kind) {
+  switch(nt->kind) {
   case NODE_OR_TUPLE_NONE: return EM_RESULT_OK;
   case NODE_OR_TUPLE_NODE: {
-    node_t * n = nt.value.node;
+    node_t * n = nt->value.node;
     if(n == nullptr) return EM_RESULT_OK;
     CHKERR(machine_mark_gray(machine, n->value));
     n->value = v;
@@ -50,28 +49,28 @@ exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t nt, object_t * v) {
     return EM_RESULT_OK;
   }
   case NODE_OR_TUPLE_TUPLE: {
-    arraylist_t /* <node_or_tuple_t> */ * al = &nt.value.tuple;
+    arraylist_t /* <node_or_tuple_t> */ * al = &(nt->value.tuple);
     if(al->length == 1) {
-      if(object_kind(v) != EMFRP_OBJECT_TUPLE1) {
-	exec_sequence_set_nil(machine, ((node_or_tuple_t *)(al->buffer))[0]);
+      if(!object_is_pointer(v) || object_kind(v) != EMFRP_OBJECT_TUPLE1) {
+	exec_sequence_set_nil(machine, &(((node_or_tuple_t *)(al->buffer))[0]));
         return EM_RESULT_TYPE_MISMATCH;
       }
-      return exec_sequence_set_nodes(machine, ((node_or_tuple_t *)(al->buffer))[0], v->value.tuple1.i0);
+      return exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[0]), v->value.tuple1.i0);
     } else if(al->length == 2) {
-      if(object_kind(v) != EMFRP_OBJECT_TUPLE2) {
+      if(!object_is_pointer(v) || object_kind(v) != EMFRP_OBJECT_TUPLE2) {
 	exec_sequence_set_nil(machine, nt);
         return EM_RESULT_TYPE_MISMATCH;
       }
-      return exec_sequence_set_nodes(machine, ((node_or_tuple_t *)(al->buffer))[0], v->value.tuple2.i0)
-        | exec_sequence_set_nodes(machine, ((node_or_tuple_t *)(al->buffer))[1], v->value.tuple2.i1);
+      return exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[0]), v->value.tuple2.i0)
+        | exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[1]), v->value.tuple2.i1);
     } else {
-      if(object_kind(v) != EMFRP_OBJECT_TUPLEN || v->value.tupleN.length != al->length) {
+      if(!object_is_pointer(v) || object_kind(v) != EMFRP_OBJECT_TUPLEN || v->value.tupleN.length != al->length) {
 	exec_sequence_set_nil(machine, nt);
         return EM_RESULT_TYPE_MISMATCH;
       }
       em_result ret = 0;
       for(int i = 0; i , al->length; ++i) {
-	ret |= exec_sequence_set_nodes(machine, ((node_or_tuple_t *)(al->buffer))[i], object_tuple_ith(v, i));
+	ret |= exec_sequence_set_nodes(machine, &(((node_or_tuple_t *)(al->buffer))[i]), object_tuple_ith(v, i));
       }
       return ret != 0 ? EM_RESULT_TYPE_MISMATCH : EM_RESULT_OK; // TODO : improve it.
     }
@@ -91,7 +90,7 @@ exec_sequence_update_value_given_object(machine_t * machine, exec_sequence_t * s
       self->node_definition->action(obj);
   }
   if(self->node_definitions != nullptr
-     && exec_sequence_set_nodes(machine, *(self->node_definitions), obj) != EM_RESULT_OK)
+     && exec_sequence_set_nodes(machine, self->node_definitions, obj) != EM_RESULT_OK)
     goto err2;
   return EM_RESULT_OK;
  err:
@@ -103,7 +102,7 @@ exec_sequence_update_value_given_object(machine_t * machine, exec_sequence_t * s
   }
  err2:
   if(self->node_definitions != nullptr)
-    exec_sequence_set_nil(machine, *(self->node_definitions));
+    exec_sequence_set_nil(machine, self->node_definitions);
   return errres;
 }
 
@@ -213,15 +212,21 @@ exec_sequence_free(exec_sequence_t * es) {
 
 void
 node_or_tuple_debug_print(node_or_tuple_t * nt) {
-  if(nt->kind == NODE_OR_TUPLE_NODE) {
-    printf("%s", nt->value.node->name.buffer);
-  } else {
+  switch(nt->kind) {
+  case NODE_OR_TUPLE_NONE:
+    printf("*"); break;
+  case NODE_OR_TUPLE_NODE:
+    printf("%s", nt->value.node->name.buffer); break;
+  case NODE_OR_TUPLE_TUPLE:
     printf("(");
-    node_or_tuple_debug_print(&(((node_or_tuple_t *)(nt->value.tuple.buffer))[0]));
-    for(int i = 1; i < nt->value.tuple.length; ++i) {
-      printf(", ");
-      node_or_tuple_debug_print(&(((node_or_tuple_t *)(nt->value.tuple.buffer))[i]));
+    {//if(nt->value.tuple.length > 0) {
+      node_or_tuple_debug_print(&(((node_or_tuple_t *)(nt->value.tuple.buffer))[0]));
+      for(int i = 1; i < nt->value.tuple.length; ++i) {
+	printf(", ");
+	node_or_tuple_debug_print(&(((node_or_tuple_t *)(nt->value.tuple.buffer))[i]));
+      }
     }
     printf(")");
+    break;
   }
 }

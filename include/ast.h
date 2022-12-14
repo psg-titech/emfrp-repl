@@ -2,13 +2,14 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/29
+ * @date   2022/12/14
  ------------------------------------------- */
 
 #pragma once
 #include "emmem.h"
 #include "string_t.h"
 #include <stdint.h>
+#include "collections/list_t.h"
 
 struct parser_expression_t;
 
@@ -126,14 +127,24 @@ typedef struct parser_expression_t {
   } value;
 } parser_expression_t;
 
+typedef struct string_or_tuple_t {
+  bool isString;
+  union {
+    string_t * string;
+    list_t /*<string_or_tuple_t>*/ * tuple;
+  } value;
+} string_or_tuple_t;
+
 // ! Node Definition.
 typedef struct parser_node_t {
   // ! Name of node.
-  string_t name;
+  string_or_tuple_t name;
   // ! Expression of node.
   parser_expression_t * expression;
   // ! `init` Expression
   parser_expression_t * init_expression;
+  // ! `as` Expression
+  string_t * as;
 } parser_node_t;
 
 // ! Constructor of parser_node_t.
@@ -144,14 +155,61 @@ typedef struct parser_node_t {
  * \return Malloc-ed and constructed parser_node_t
  */
 static inline parser_node_t *
-parser_node_new(string_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression) {
+parser_node_new(string_or_tuple_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression, string_t * node_as) {
   parser_node_t * ret = nullptr;
   if(em_malloc((void **)&ret, sizeof(parser_node_t)))
     return nullptr;
   ret->name = *node_name;
+  em_free(node_name);
   ret->expression = expression;
   ret->init_expression = init_expression;
+  ret->as = node_as;
   return ret;
+}
+
+// ! Shallow free for parser_node_t.
+/* !
+ * This does not free strings, and parser_node_t::expression.
+ * This is used when adding a node succeeded.
+ * \param pn To be freed.
+ */
+void parser_node_free_shallow(parser_node_t * pn);
+
+// ! Deep free for parser_node_t.
+/* !
+ * This does free strings, and parser_node_t::expression.
+ * This is used when adding a node failed.
+ * \param pn To be freed.
+ */
+void parser_node_free_deep(parser_node_t * pn);
+
+
+static inline string_or_tuple_t *
+parser_node_identifier_new(string_t * str) {
+  string_or_tuple_t * v;
+  if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
+    return nullptr;
+  v->isString = true;
+  v->value.string = str;
+  return v;
+}
+
+static inline string_or_tuple_t *
+parser_node_identifiers_new(list_t * li) {
+  string_or_tuple_t * v;
+  if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
+    return nullptr;
+  v->isString = false;
+  v->value.tuple = li;
+  return v;
+}
+
+static inline list_t /*<string_or_tuple_t>*/ *
+parser_node_identifiers_prepend(string_or_tuple_t * head,
+			    list_t /*<string_or_tuple_t>*/ * tail) {
+  if(list_add2(&tail, string_or_tuple_t, head))
+    return nullptr;
+  return tail;
 }
 
 // ! Constructor of binary expression.
@@ -228,6 +286,7 @@ parser_expression_new_identifier(string_t * ident) {
     return nullptr;
   ret->kind = EXPR_KIND_IDENTIFIER;
   ret->value.identifier = *ident;
+  em_free(ident);
   return ret;
 }
 
@@ -243,6 +302,7 @@ parser_expression_new_last_identifier(string_t * ident) {
     return nullptr;
   ret->kind = EXPR_KIND_LAST_IDENTIFIER;
   ret->value.identifier = *ident;
+  em_free(ident);
   return ret;
 }
 
