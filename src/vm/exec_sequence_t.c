@@ -179,8 +179,10 @@ node_or_tuple_t_compact(node_or_tuple_t * nt) {
         node_or_tuple_t * nn = &(((node_or_tuple_t *)nt->value.tuple.buffer)[i]);
         result &= node_or_tuple_t_compact(nn);
       }
-      if(result)
+      if(result) {
         arraylist_free(&(nt->value.tuple));
+	nt->kind = NODE_OR_TUPLE_NONE;
+      }
       return result;
     }
   default:

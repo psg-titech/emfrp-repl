@@ -40,12 +40,13 @@ go_check_dependencies(list_t ** dependencies, node_or_tuple_t * nt) {
   switch(nt->kind) {
   case NODE_OR_TUPLE_NONE: return;
   case NODE_OR_TUPLE_NODE: {
-      list_t * removed;
-      string_t * n = &(nt->value.node->name);
-      while((removed = list_remove(dependencies, string_compare2, n)) != nullptr)
-	em_free(removed);
-      return;
-    }
+    if(nt->value.node == nullptr) return; // itself
+    list_t * removed;
+    string_t * n = &(nt->value.node->name);
+    while((removed = list_remove(dependencies, string_compare2, n)) != nullptr)
+      em_free(removed);
+    return;
+  }
   case NODE_OR_TUPLE_TUPLE:
     for(int i = 0; i < nt->value.tuple.length; ++i)
       go_check_dependencies(dependencies, &(((node_or_tuple_t *)(nt->value.tuple.buffer))[i]));
