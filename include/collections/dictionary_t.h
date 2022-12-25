@@ -2,7 +2,7 @@
  * @file   dictionary_t.h
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/24
+ * @date   2022/12/21
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
@@ -28,10 +28,11 @@ em_result dictionary_new(dictionary_t * out);
  * \param value_size sizeof(value)
  * \param hasher The hashing function of value.
  * \param comparer The compare function of value.
- * \param replacer The replace function for existing item. (nullable)
+ * \param replacer The replace function for existing item. the 1st argument will be the entry to the existing item.(nullable)
+ * \param replacer_arg the value which passed to replacer as the 2nd argument.
  * \return The status code
  */
-em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)));
+em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *, void *)), void * replacer_arg);
 
 // ! Adding an item to the dictionary. This returns the pointer of copied buffer.
 /* !
@@ -40,11 +41,12 @@ em_result dictionary_add(dictionary_t * out, void * value, size_t value_size, si
  * \param value_size sizeof(value)
  * \param hasher The hashing function of value.
  * \param comparer The compare function of value.
- * \param replacer The replace function for existing item. (nullable)
+ * \param replacer The replace function for existing item. the 1st argument will be the entry to the existing item.(nullable)
+ * \param replacer_arg the value which passed to replacer as the 2nd argument.
  * \param entry_ptr The pointer of copied buffer.
  * \return The status code
  */
-em_result dictionary_add2(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *)), void** entry_ptr);
+em_result dictionary_add2(dictionary_t * out, void * value, size_t value_size, size_t(hasher(void *)), bool(comparer(void *, void *)), void(replacer(void *, void *)), void * replacer_arg, void** entry_ptr);
 
 // ! Getting an item from the dictionary
 /* !

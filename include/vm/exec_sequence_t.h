@@ -2,15 +2,15 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/6
+ * @date   2022/12/21
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
 #include "ast.h"
 #include "collections/arraylist_t.h"
 #include "vm/node_t.h"
+#include "vm/program.h"
 
-typedef object_t * (*exec_callback_t)(void);
 struct machine_t;
 
 typedef enum node_or_tuple_t_kind {
@@ -28,7 +28,6 @@ typedef struct node_or_tuple_t {
   } value;
 } node_or_tuple_t;
 
-#define EXEC_SEQUENCE_PROGRAM_KIND_SHIFT 3
 #define exec_sequence_program_kind(v) ((v)->program_kind & (~7))
 #define exec_sequence_mark_phantom(v) ((v)->program_kind |= 1)
 #define exec_sequence_unmark_phantom(v) ((v)->program_kind &= (~1))
@@ -40,20 +39,7 @@ typedef struct node_or_tuple_t {
 #define exec_sequence_unmark_lastfailed(v) ((v)->program_kind &= (~4))
 #define exec_sequence_marked_lsatfailed(v) (((v)->program_kind & 4) != 0)
 
-// ! Program kind of node.
-/* !
- * LSB represents `phantom`, which is created before verification.
- * LSB + 1 represents `modified`, whose defined_nodes are written into the journal.
- * LSB + 2 represents `last failed`, which failed at the last time.
- */
-typedef enum exec_sequence_program_kind {
-  // ! no program.(it may be updated via emfrp_indicate_node_update.)
-  EXEC_SEQUENCE_PROGRAM_KIND_NOTHING = 1 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
-  // ! containing AST.
-  EXEC_SEQUENCE_PROGRAM_KIND_AST = 2 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
-  // ! containing callback.
-  EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK = 3 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
-} exec_sequence_program_kind;
+typedef emfrp_program_kind exec_sequence_program_kind;
 
 typedef struct exec_sequence_t {
   // ! Kind of exec_sequence_t::program.
@@ -80,7 +66,7 @@ typedef struct exec_sequence_t {
  */
 static inline em_result
 exec_sequence_new_mono_nothing(exec_sequence_t * out, node_t * value) {
-  out->program_kind = EXEC_SEQUENCE_PROGRAM_KIND_NOTHING;
+  out->program_kind = EMFRP_PROGRAM_KIND_NOTHING;
   out->program.nothing = nullptr;
   out->node_definition = value;
   out->node_definitions = nullptr;
@@ -95,7 +81,7 @@ exec_sequence_new_mono_nothing(exec_sequence_t * out, node_t * value) {
  */
 static inline em_result
 exec_sequence_new_mono_ast(exec_sequence_t * out, parser_expression_t * ast, node_t * value) {
-  out->program_kind = EXEC_SEQUENCE_PROGRAM_KIND_AST;
+  out->program_kind = EMFRP_PROGRAM_KIND_AST;
   out->program.ast = ast;
   out->node_definition = value;
   out->node_definitions = nullptr;
@@ -111,7 +97,7 @@ exec_sequence_new_mono_ast(exec_sequence_t * out, parser_expression_t * ast, nod
  */
 static inline em_result
 exec_sequence_new_mono_callback(exec_sequence_t * out, exec_callback_t callback, node_t * value) {
-  out->program_kind = EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK;
+  out->program_kind = EMFRP_PROGRAM_KIND_CALLBACK;
   out->program.callback = callback;
   out->node_definition = value;
   out->node_definitions = nullptr;
@@ -128,7 +114,7 @@ exec_sequence_new_mono_callback(exec_sequence_t * out, exec_callback_t callback,
  */
 static inline em_result
 exec_sequence_new_multi_callback(exec_sequence_t * out, exec_callback_t callback, node_t * as_value, node_or_tuple_t * value) {
-  out->program_kind = EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK;
+  out->program_kind = EMFRP_PROGRAM_KIND_CALLBACK;
   out->program.callback = callback;
   out->node_definition = as_value;
   out->node_definitions = value;

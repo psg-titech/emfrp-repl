@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/25
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -12,6 +12,8 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
   object_t * lro = nullptr, * rro = nullptr;
   bool lro_is_integer, rro_is_integer;
   em_result errres;
+  stack_state_t state;
+  CHKERR2(err_state, machine_get_stack_state(m, &state));
   CHKERR(exec_ast(m, l, &lro));
 
   if(kind == EXPR_KIND_DAND && lro == &object_false) {
@@ -21,12 +23,11 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
     *out = lro;
     return EM_RESULT_OK;
   }
-  
+  CHKERR(machine_push(m, lro));
   CHKERR(exec_ast(m, r, &rro));
-  
   lro_is_integer = object_is_integer(lro);
   rro_is_integer = object_is_integer(rro);
-
+  CHKERR2(err_state, machine_restore_stack_state(m, state));
   if(lro_is_integer && rro_is_integer) {
     int32_t retVal = 0;
     int32_t ll = object_get_integer(lro);
@@ -83,46 +84,44 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
       *out = (lro != &object_false) ^ (rro != &object_false) ? &object_true : &object_false;
       goto ok;
     default:
-      object_free(lro);
-      object_free(rro);
       return EM_RESULT_TYPE_MISMATCH;
     }
   ok:
-    object_free(lro);
-    object_free(rro);
     return EM_RESULT_OK;
   }
 
- err:
-  return errres;
+ err: machine_restore_stack_state(m, state);
+ err_state: return errres;
 }
 
-//em_result
-//exec_ast_unary(
-
 em_result
-exec_tuple(machine_t * m, parser_expression_t * v, object_t ** out) {
-  em_result errres;
-  parser_expression_tuple_list_t * li = &(v->value.tuple);
+exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) {
+  em_result errres = EM_RESULT_OK;
   object_t * i0 = nullptr;
   object_t * i1 = nullptr;
+  parser_expression_tuple_list_t * lli = li;
   int tuple_len = 1;
-  while(li->next != nullptr) {
+  stack_state_t state;
+  CHKERR2(err_state, machine_get_stack_state(m, &state));
+  while(lli->next != nullptr) {
     tuple_len++;
-    li = li->next;
+    lli = lli->next;
   }
-  li = &(v->value.tuple);
+  *out = nullptr;
   CHKERR(machine_alloc(m, out));
   switch(tuple_len) {
   case 1: {
     CHKERR(exec_ast(m, li->value, &i0));
+    CHKERR(machine_push(m, i0));
     CHKERR(object_new_tuple1(*out, i0));
     break;
   }
   case 2: {
     CHKERR(exec_ast(m, li->value, &i0));
+    CHKERR(machine_push(m, i0));
     li = li->next;
     CHKERR(exec_ast(m, li->value, &i1));
+    CHKERR(machine_push(m, i1));
     CHKERR(object_new_tuple2(*out, i0, i1));
     break;
   }
@@ -132,37 +131,120 @@ exec_tuple(machine_t * m, parser_expression_t * v, object_t ** out) {
   default: {
     int i; object_t * o;
     CHKERR(object_new_tupleN(*out, tuple_len));
+    CHKERR(machine_push(m, *out));
     for(i = 0; i < tuple_len; ++i) {
-      errres = exec_ast(m, li->value,  &o);
-      if(EM_RESULT_OK != errres) goto err1;
+      CHKERR(exec_ast(m, li->value,  &o));
       object_tuple_ith(*out, i) = o;
       li = li->next;
     }
-    goto end_switch;
-  err1:
-    for(int j = 0; j < i; ++j)
-      machine_return(m, object_tuple_ith(*out, j));
-    goto err;
+    CHKERR(machine_pop(m, nullptr));
+    break;
   }
   }
- end_switch:
+  CHKERR2(err_state, machine_restore_stack_state(m, state));
   return EM_RESULT_OK;
  err:
+  machine_restore_stack_state(m, state);
   if(*out != nullptr) {
     machine_return(m, *out);
     *out = nullptr;
   }
   if(i0 != nullptr) machine_return(m, i0);
   if(i1 != nullptr) machine_return(m, i1);
+ err_state: return errres;
+}
+
+
+em_result
+exec_funccall_set_args(machine_t * machine, string_or_tuple_t * nt, object_t * v) {
+  em_result errres;
+  if(nt->isString){
+    return machine_assign_variable(machine, nt->value.string, v);
+  } else {
+    if(!object_is_pointer(v) || v == nullptr) return EM_RESULT_TYPE_MISMATCH;
+    list_t /* <string_or_tuple_t> */ * al = nt->value.tuple;
+    int len = 0;
+    for(al = nt->value.tuple; al != nullptr; al = LIST_NEXT(al)) len++;
+    al = nt->value.tuple;
+    
+    if(object_kind(v) == EMFRP_OBJECT_TUPLE1) {
+      if(len != 1) return EM_RESULT_TYPE_MISMATCH;
+      return exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->value)),
+				    v->value.tuple1.i0);
+    } else if(object_kind(v) == EMFRP_OBJECT_TUPLE2) {
+      if(len != 2) return EM_RESULT_TYPE_MISMATCH;
+      CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->value)),
+				    v->value.tuple2.i0));
+      CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->next->value)),
+				    v->value.tuple2.i1));
+      return EM_RESULT_OK;
+    } else if(object_kind(v) == EMFRP_OBJECT_TUPLEN){
+      if(len != v->value.tupleN.length) return EM_RESULT_TYPE_MISMATCH;
+      for(int i = 0; i < v->value.tupleN.length; ++i, al = LIST_NEXT(al)) {
+	CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(al->value)), object_tuple_ith(v, i)));
+      }
+      return EM_RESULT_OK;
+    } else
+      return EM_RESULT_TYPE_MISMATCH;
+  }
+ err:
   return errres;
+}
+
+em_result
+exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
+  object_t * callee = nullptr;
+  object_t * args = nullptr;
+  stack_state_t state;
+  em_result errres = EM_RESULT_OK;
+  variable_table_t * prev_vt = nullptr;
+  CHKERR2(err_state, machine_get_stack_state(m, &state));
+  CHKERR(exec_ast(m, v->value.funccall.callee, &callee));
+  if(!object_is_pointer(callee) || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
+    return EM_RESULT_TYPE_MISMATCH;
+  CHKERR(machine_push(m, callee));
+  CHKERR(exec_tuple(m, &(v->value.funccall.arguments), &args));
+  CHKERR(machine_push(m, args));
+  prev_vt = machine_get_variable_table(m);
+  if(!object_is_pointer(callee->value.function.closure) || callee->value.function.closure == nullptr) {
+    CHKERR(machine_set_variable_table(m, nullptr));
+  } else if(object_kind(callee->value.function.closure) == EMFRP_OBJECT_VARIABLE_TABLE) {
+    CHKERR(machine_set_variable_table(m, callee->value.function.closure->value.variable_table.ptr));
+  } else {
+    errres = EM_RESULT_INVALID_ARGUMENT;
+    goto err;
+  }
+  CHKERR2(err2, machine_new_variable_table(m));
+  switch(callee->value.function.kind) {
+  case EMFRP_PROGRAM_KIND_AST:
+    CHKERR2(err2, exec_funccall_set_args(m, callee->value.function.function.ast->value.function.arguments, args));
+    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast, out)); break;
+  default: DEBUGBREAK; break;
+  }
+  CHKERR2(err2, machine_pop_variable_table(m));
+  machine_set_variable_table(m, prev_vt);
+  machine_restore_stack_state(m, state);
+  return EM_RESULT_OK;
+ err2: machine_set_variable_table(m, prev_vt);
+ err:  machine_restore_stack_state(m, state);
+ err_state: return errres;
+}
+
+em_result
+exec_func(machine_t * m, parser_expression_t * v, object_t ** out) {
+  em_result errres = EM_RESULT_OK;
+  CHKERR(machine_alloc(m, out));
+  return object_new_function_ast(*out, machine_get_variable_table(m)->this_object_ref, v);
+ err: return errres;
 }
 
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
   node_t * id;
+  stack_state_t state;
   if (EXPR_KIND_IS_INTEGER(v)) {
-    CHKERR(object_new_int(out, (int32_t)((size_t)v >> 1)));
+    CHKERR2(err_state, object_new_int(out, (int32_t)((size_t)v >> 1)));
   } else if (EXPR_KIND_IS_BOOLEAN(v))
     *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
   else if (EXPR_KIND_IS_BIN_OP(v))
@@ -172,9 +254,11 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
     case EXPR_KIND_IF: {
       object_t * cond_result = nullptr;
       bool cond_v;
+      CHKERR2(err_state, machine_get_stack_state(m, &state));
       CHKERR(exec_ast(m, v->value.ifthenelse.cond, &cond_result));
+      CHKERR(machine_push(m, cond_result));
       cond_v = cond_result == &object_true;
-      object_free(cond_result);
+      machine_restore_stack_state(m, state);
       CHKERR(exec_ast(m, cond_v ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
       break;
     }
@@ -189,14 +273,16 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       *out = id->last;
       break;
     case EXPR_KIND_TUPLE:
-      return exec_tuple(m, v, out);
+      return exec_tuple(m, &(v->value.tuple), out);
+    case EXPR_KIND_FUNCCALL: return exec_funccall(m, v, out);
+    case EXPR_KIND_FUNCTION: return exec_func(m, v, out);
     default:
       return EM_RESULT_INVALID_ARGUMENT;
     }
   }
   return EM_RESULT_OK;
- err:
-  return errres;
+ err: machine_restore_stack_state(m, state);
+ err_state: return errres;
 }
 
 em_result

@@ -112,13 +112,13 @@ exec_sequence_update_value(machine_t * machine, exec_sequence_t * self) {
   em_result errres;
   object_t * new_obj = nullptr;
   switch(exec_sequence_program_kind(self)) {
-  case EXEC_SEQUENCE_PROGRAM_KIND_AST:
+  case EMFRP_PROGRAM_KIND_AST:
     CHKERR(exec_ast(machine, self->program.ast, &new_obj));
     break;
-  case EXEC_SEQUENCE_PROGRAM_KIND_CALLBACK:
+  case EMFRP_PROGRAM_KIND_CALLBACK:
     new_obj = self->program.callback();
     break;
-  case EXEC_SEQUENCE_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
+  case EMFRP_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
   }
   return exec_sequence_update_value_given_object(machine, self, new_obj);
  err:
@@ -207,7 +207,7 @@ exec_sequence_free(exec_sequence_t * es) {
 #if DEBUG
   if(es->node_definitions != nullptr) DEBUGBREAK;
 #endif
-  if(exec_sequence_program_kind(es) == EXEC_SEQUENCE_PROGRAM_KIND_AST)
+  if(exec_sequence_program_kind(es) == EMFRP_PROGRAM_KIND_AST)
     parser_expression_free(es->program.ast);
 }
 

@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/29
+ * @date   2022/12/19
  ------------------------------------------- */
 
 #pragma once
@@ -10,6 +10,10 @@
 #include <stdbool.h>
 #include "string_t.h"
 #include "emmem.h"
+#include "vm/program.h"
+#include "ast.h"
+
+struct variable_table_t;
 // ! Kind of object_t.
 /* !
    This distinguish the union, object_t::value.
@@ -36,10 +40,18 @@ typedef enum object_kind_t : int32_t {
   // ! Symbol
   EMFRP_OBJECT_SYMBOL = 4 << 1,
   // ! String
-  EMFRP_OBJECT_STRING = 5 << 1
+  EMFRP_OBJECT_STRING = 5 << 1,
+  // ! Function
+  EMFRP_OBJECT_FUNCTION = 6 << 1,
+  // ! Local varible table
+  EMFRP_OBJECT_VARIABLE_TABLE = 7 << 1,
+  // ! Local stack = TupleN
+  EMFRP_OBJECT_STACK = 3 << 1,
 } object_kind_t;
 
-// ! Object.
+typedef enum emfrp_program_kind function_program_kind;
+struct parser_expression_t;
+// ! Object. (4 WORDS)
 typedef struct object_t {
   // ! kind of value.
   object_kind_t kind;
@@ -55,7 +67,26 @@ typedef struct object_t {
     // ! used on tuple 2.
     struct{ struct object_t * i0; struct object_t * i1; } tuple2;
     // ! used on tuple N.
-    struct{ size_t length; struct object_t ** data; } tupleN;
+    struct{ struct object_t ** data; size_t length; size_t _; } tupleN;
+    // ! used on Function.
+    struct{
+      // ! Closure(kind == EMFRP_OBJECT_VARIABLE_TABLE)
+      struct object_t * closure;
+      // ! Kind of the function.
+      function_program_kind kind;
+      union {
+	// ! Nothing
+	nullptr_t nothing;
+	// ! AST
+	struct parser_expression_t * ast;
+	// ! CallBack
+	exec_callback_t callback;
+      } function;
+    } function;
+    // ! used on local variable table.
+    struct{ struct variable_table_t * ptr; } variable_table;
+    // ! used on local stack.
+    struct{ struct object_t ** data; size_t length; size_t capacity; } stack;
   } value;
 } object_t;
 
@@ -204,7 +235,49 @@ static inline em_result
 object_new_tupleN(object_t * out, size_t size) {
   out->kind = EMFRP_OBJECT_TUPLEN | (out->kind & 1);
   out->value.tupleN.length = size;
-  return em_malloc((void **)(&(out->value.tupleN.data)), sizeof(object_t *) * size);
+  return em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *));
+}
+
+static inline em_result
+object_new_function_ast(object_t * out, object_t * closure, parser_expression_t * ast) {
+  if(ast->kind != EXPR_KIND_FUNCTION) {
+    DEBUGBREAK;
+    return EM_RESULT_INVALID_ARGUMENT;
+  }
+  out->kind = EMFRP_OBJECT_FUNCTION | (out->kind & 1);
+  out->value.function.closure = closure;
+  out->value.function.kind = EMFRP_PROGRAM_KIND_AST;
+  out->value.function.function.ast = ast;
+  ast->value.function.reference_count++;
+}
+
+// ! Construct the new vairbale table object.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param ptr The pointer to the table.
+ * \return The result.
+ */
+static inline em_result
+object_new_variable_table(object_t * out, struct variable_table_t * ptr) {
+  out->kind = EMFRP_OBJECT_VARIABLE_TABLE | (out->kind & 1);
+  out->value.variable_table.ptr = ptr;
+  return EM_RESULT_OK;
+}
+
+// ! Construct the new stack.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param cap capacity.
+ * \return The result.
+ */
+static inline em_result
+object_new_stack(object_t * out, size_t cap) {
+  em_result errres = EM_RESULT_OK;
+  out->kind = EMFRP_OBJECT_STACK | (out->kind & 1);
+  CHKERR(em_allocarray((void **)(&(out->value.stack.data)), cap, sizeof(object_t *)));
+  out->value.stack.capacity = cap;
+  out->value.stack.length = 0;
+ err: return errres;
 }
 
 // Retrive ith of the given tuple.

@@ -8,6 +8,7 @@ function(set_source prefix)
         ${prefix}/src/vm/exec.c
 	${prefix}/src/vm/exec_sequence_t.c
         ${prefix}/src/vm/machine.c
+        ${prefix}/src/vm/variable_t.c
         ${prefix}/src/vm/node_t.c
 	${prefix}/src/vm/gc.c
 	${prefix}/src/vm/journal_t.c

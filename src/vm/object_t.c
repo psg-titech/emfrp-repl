@@ -2,7 +2,7 @@
  * @file   object_t.c
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/21
  ------------------------------------------- */
 #include "vm/object_t.h"
 #include <stdio.h>
@@ -47,6 +47,15 @@ object_print(object_t * v) {
       printf(")");
       break;
     }
+    case EMFRP_OBJECT_FUNCTION: {
+      printf("<function object>");
+      break;
+    }
+    case EMFRP_OBJECT_VARIABLE_TABLE: {
+      printf("<variable table>");
+      break;
+    }
+    default: break;
     }
   }
 }

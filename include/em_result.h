@@ -2,7 +2,7 @@
  * @file   em_result.h
  * @brief  Status Code
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/21
  ------------------------------------------- */
 #pragma once
 
@@ -24,6 +24,8 @@ typedef enum em_result_t {
   EM_RESULT_INVALID_ARGUMENT = 4,
   // ! memory_manager_t::worklist is overflowed.
   EM_RESULT_GC_WORKLIST_OVERFLOW = 5,
+  // ! Stack is overflowed.
+  EM_RESULT_STACK_OVERFLOW = 6,
   // Below, users are responsible.
   // ! Type Mismatch
   EM_RESULT_TYPE_MISMATCH = 16,

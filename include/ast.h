@@ -80,7 +80,11 @@ typedef enum parser_expression_kind_t : int32_t {
   // ! If expression
   EXPR_KIND_IF = 4 << PARSER_EXPRESSION_KIND_SHIFT,
   // ! Tuple expression
-  EXPR_KIND_TUPLE = 5 << PARSER_EXPRESSION_KIND_SHIFT
+  EXPR_KIND_TUPLE = 5 << PARSER_EXPRESSION_KIND_SHIFT,
+  // ! Function call
+  EXPR_KIND_FUNCCALL = 6 << PARSER_EXPRESSION_KIND_SHIFT,
+  // ! Function
+  EXPR_KIND_FUNCTION = 7 << PARSER_EXPRESSION_KIND_SHIFT,
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
@@ -91,6 +95,14 @@ typedef enum parser_expression_kind_t : int32_t {
 
 #define parser_expression_true() (parser_expression_t *)0x2;
 #define parser_expression_false() (parser_expression_t *)0x6;
+
+typedef struct string_or_tuple_t {
+  bool isString;
+  union {
+    string_t * string;
+    list_t /*<string_or_tuple_t>*/ * tuple;
+  } value;
+} string_or_tuple_t;
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
@@ -124,16 +136,24 @@ typedef struct parser_expression_t {
     string_t identifier;
     // ! When kind is EXPR_KIND_TUPLE.
     parser_expression_tuple_list_t tuple;
+    // ! When kind is EXPR_KIND_FUNCCALL
+    struct {
+      // Callee Expression
+      struct parser_expression_t * callee;
+      // Argument Expressions
+      parser_expression_tuple_list_t arguments;
+    } funccall;
+    // ! When kind is EXPR_KIND_FUNCTION
+    struct {
+      // ! Reference Count
+      size_t reference_count;
+      // ! Argument List
+      string_or_tuple_t * arguments;
+      // ! Body
+      struct parser_expression_t * body;
+    } function;
   } value;
 } parser_expression_t;
-
-typedef struct string_or_tuple_t {
-  bool isString;
-  union {
-    string_t * string;
-    list_t /*<string_or_tuple_t>*/ * tuple;
-  } value;
-} string_or_tuple_t;
 
 // ! Node Definition.
 typedef struct parser_node_t {

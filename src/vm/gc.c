@@ -2,11 +2,13 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/29
+ * @date   2022/12/21
  ------------------------------------------- */
 #include "emmem.h"
+#include "ast.h"
 #include "vm/gc.h"
 #include "vm/machine.h"
+#include "vm/variable_t.h"
 
 #define MARK_LIMIT 10
 #define SWEEP_LIMIT 10
@@ -68,10 +70,25 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
       CHKERR(push_worklist(self, cur->value.tuple2.i0));
       CHKERR(push_worklist(self, cur->value.tuple2.i1));
       break;
+    //case EMFRP_OBJECT_STACK:
     case EMFRP_OBJECT_TUPLEN:
       for(size_t i = 0; i < cur->value.tupleN.length; ++i)
 	CHKERR(push_worklist(self, object_tuple_ith(cur, i)));
       break;
+    case EMFRP_OBJECT_VARIABLE_TABLE: if(cur->value.variable_table.ptr != nullptr) {
+      list_t * li;
+      FOREACH_DICTIONARY(li, &(cur->value.variable_table.ptr->table)) {
+	void * v;
+        FOREACH_LIST(v, li) {
+          variable_t * n = (variable_t *)v;
+	  //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
+          CHKERR(push_worklist(self, n->value));
+        }
+      }
+      if(cur->value.variable_table.ptr->parent != nullptr)
+	return push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref);
+    }
+    case EMFRP_OBJECT_FUNCTION: return push_worklist(self, cur->value.function.closure);
     case EMFRP_OBJECT_FREE:
     case EMFRP_OBJECT_STRING:
     case EMFRP_OBJECT_SYMBOL: break;
@@ -90,6 +107,17 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
       if(object_is_marked(cur))
 	object_unmark(cur);
       else {
+	switch(object_kind(cur)) {
+	//case EMFRP_OBJECT_STACK:
+	case EMFRP_OBJECT_TUPLEN: em_free(cur->value.tupleN.data); break;
+	case EMFRP_OBJECT_VARIABLE_TABLE: variable_table_free(cur->value.variable_table.ptr); break;
+	case EMFRP_OBJECT_FUNCTION:
+	  switch(cur->value.function.kind) {
+	  case EMFRP_PROGRAM_KIND_AST: parser_expression_free(cur->value.function.function.ast); break;
+	  }
+	  break;
+	default: break;
+	}
 	object_new_freelist(cur, self->freelist);
 	self->freelist = cur;
 	//printf("recycled: %d\n", ((int)cur - (int)self->space) / sizeof(object_t));
@@ -109,6 +137,7 @@ memory_manager_gc(struct machine_t * self,
   case MEMORY_MANAGER_STATE_IDLE:
     if(mm->remaining <= MEMORY_MANAGER_GC_START_SIZE) {
       mm->worklist_top = 0;
+      CHKERR(push_worklist(mm, self->stack));
       list_t * li;
       FOREACH_DICTIONARY(li, &self->nodes) {
 	void * v;

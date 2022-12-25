@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/21
  ------------------------------------------- */
 
 #include "ast.h"
@@ -133,6 +133,30 @@ parser_expression_print(parser_expression_t * e) {
       }
       printf(")");
       break;
+    case EXPR_KIND_FUNCCALL:
+      printf("(");
+      parser_expression_print(e->value.funccall.callee);
+      printf(")");
+      {
+	printf("(");
+	parser_expression_tuple_list_t * tl = &(e->value.funccall.arguments);
+	while(tl != nullptr) {
+	  parser_expression_print(tl->value);
+	  if(tl->next != nullptr)
+	    printf(", ");
+	  tl = tl->next;
+	}
+	printf(")");
+      }
+      break;
+    case EXPR_KIND_FUNCTION: {
+      printf("(fun");
+      //      go_node_name_print(e->value.function.arguments->tuple);
+      printf(" -> (");
+      parser_expression_print(e->value.function.body);
+      printf("))");
+      break;
+    }
     default: DEBUGBREAK; break;
     }
   }
@@ -146,21 +170,46 @@ parser_expression_free(parser_expression_t * expr) {
   if(EXPR_KIND_IS_BIN_OP(expr)) {
     parser_expression_free(expr->value.binary.lhs);
     parser_expression_free(expr->value.binary.rhs);
-  } else if(expr->kind == EXPR_KIND_IDENTIFIER || expr->kind == EXPR_KIND_LAST_IDENTIFIER)
-    string_free(&(expr->value.identifier));
-  else if(expr->kind == EXPR_KIND_IF) {
-    parser_expression_free(expr->value.ifthenelse.cond);
-    parser_expression_free(expr->value.ifthenelse.then);
-    parser_expression_free(expr->value.ifthenelse.otherwise);
-  } else if(expr->kind == EXPR_KIND_TUPLE) {
-    parser_expression_tuple_list_t * tl = expr->value.tuple.next;
-    while(tl != nullptr) {
-      parser_expression_tuple_list_t * v = tl->next;
-      parser_expression_free(tl->value);
-      free(tl);
-      tl = v;
+  } else
+    switch(expr->kind) {
+    case EXPR_KIND_IDENTIFIER:
+    case EXPR_KIND_LAST_IDENTIFIER:
+      string_free(&(expr->value.identifier)); break;
+    case EXPR_KIND_IF:
+      parser_expression_free(expr->value.ifthenelse.cond);
+      parser_expression_free(expr->value.ifthenelse.then);
+      parser_expression_free(expr->value.ifthenelse.otherwise);
+      break;
+    case EXPR_KIND_TUPLE: {
+      parser_expression_tuple_list_t * tl = &expr->value.tuple;
+      while(tl != nullptr) {
+	parser_expression_tuple_list_t * v = tl->next;
+	parser_expression_free(tl->value);
+	free(tl);
+	tl = v;
+      }
+      break;
     }
-    parser_expression_free(expr->value.tuple.value);
-  }
+    case EXPR_KIND_FUNCCALL: {
+      parser_expression_tuple_list_t * tl = &expr->value.funccall.arguments;
+      while(tl != nullptr) {
+	parser_expression_tuple_list_t * v = tl->next;
+	parser_expression_free(tl->value);
+	free(tl);
+	tl = v;
+      }
+      parser_expression_free(expr->value.funccall.callee);
+      break;
+    }
+    case EXPR_KIND_FUNCTION: {
+      expr->value.function.reference_count--;
+      if(expr->value.function.reference_count > 0) return;
+      parser_expression_free(expr->value.function.body);
+      
+      string_or_tuple_free_deep(expr->value.function.arguments);
+      em_free(expr->value.function.arguments);
+      break;
+    }
+    }
   free(expr);
 }

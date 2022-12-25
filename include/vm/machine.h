@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/25
  ------------------------------------------- */
 
 #pragma once
@@ -14,6 +14,9 @@
 #include "vm/object_t.h"
 #include "vm/gc.h"
 #include "vm/exec_sequence_t.h"
+#include "vm/variable_t.h"
+
+#define MACHINE_STACK_SIZE 16
 
 // ! Virtual Machine.
 typedef struct machine_t {
@@ -30,6 +33,10 @@ typedef struct machine_t {
   dictionary_t /*<node_t>*/ nodes;
   // ! The memory manager.
   memory_manager_t * memory_manager;
+  // ! The stack space.
+  object_t * stack;
+  // ! The variable table.
+  variable_table_t * variable_table;
 } machine_t;
 
 // ! Constructor of machine_t.
@@ -38,6 +45,117 @@ typedef struct machine_t {
  * \return The status code
  */
 em_result machine_new(machine_t * out);
+
+// ! Push a object into the stack.
+/* !
+ * \param self The machine
+ * \param obj The object to be pushed.
+ * \return The status code.
+ */
+em_result machine_push(machine_t * self, object_t * obj);
+
+// ! Pop a object from the stack.
+/* ! 
+ * \param self The machine
+ * \param obj The object to be poped.
+ * \return The status code. ( May be EM_RESULT_STACK_OVERFLOW )
+ */
+em_result machine_pop(machine_t * self, object_t ** obj);
+
+// ! The stack state for exception handling.
+typedef size_t stack_state_t;
+
+// ! Retrive the stack state.
+/* !
+ * \param self The machine
+ * \param out The result
+ * \return The status code.
+ */
+static inline em_result
+machine_get_stack_state(machine_t * self, stack_state_t * out) {
+  *out = self->stack->value.stack.length;
+  return EM_RESULT_OK;
+}
+
+// ! Put a stack state.
+/* !
+ * \param self The machine
+ * \param state The state.
+ */
+static inline em_result
+machine_restore_stack_state(machine_t * self, stack_state_t state) {
+  em_result errres = EM_RESULT_OK;
+  for(int i = state; i < self->stack->value.stack.length; ++i)
+    CHKERR(machine_mark_gray(self, self->stack->value.stack.data[i]));
+  self->stack->value.stack.length = state;
+ err: return errres;
+}
+
+#define machine_get_variable_table(self) (self)->variable_table
+
+// ! Set a variable table.
+/* !
+ * \param self The machine
+ * \param v A variable table to be set.
+ */
+static inline em_result
+machine_set_variable_table(machine_t * self, variable_table_t * v) {
+  em_result errres = machine_mark_gray(self, self->variable_table->this_object_ref);
+  self->variable_table = v;
+  return errres;
+}
+
+// ! Push a new variable table.
+/* !
+ * \param self The machine
+ * \return The result
+ */
+static inline em_result
+machine_new_variable_table(machine_t * self) {
+  em_result errres = EM_RESULT_OK;
+  variable_table_t * v = nullptr;
+  CHKERR(em_malloc((void**)&v, sizeof(variable_table_t)));
+  CHKERR(variable_table_new(self, v, self->variable_table));
+ err: return errres;
+}
+
+// ! Pop a variable table.
+/* !
+ * \param self The machine
+ * \return The result
+ */
+static inline em_result
+machine_pop_variable_table(machine_t * self) {
+  em_result errres = machine_mark_gray(self, self->variable_table->this_object_ref);
+  if(errres != EM_RESULT_OK) return errres;
+  if(self->variable_table != nullptr)
+    self->variable_table = self->variable_table->parent;
+  return EM_RESULT_OK;
+}
+
+// ! Assign a value to the variable. 
+/* !
+ * \param self The machine
+ * \param name The name of the variable.
+ * \param value A value to be assigned.
+ * \return The result
+ */
+static inline em_result
+machine_assign_variable(machine_t * self, string_t * name, object_t * value) {
+  return variable_table_assign(self, self->variable_table, name, value);
+}
+
+// ! Lookup a value of the variable.
+/* !
+ * \param self The machine
+ * \param out The result.
+ * \param name The name of the variable.
+ * \return Whether found or not
+ */
+static inline bool
+machine_lookup_variable(machine_t * self,  object_t ** out, string_t * name) {
+  return variable_table_lookup(self->variable_table, out, name);
+}
 
 // ! Add a node(with an AST program).
 /* !

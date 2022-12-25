@@ -2,14 +2,13 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/21
  ------------------------------------------- */
 
 #include "vm/machine.h"
 #include "vm/exec.h"
 #include <stdio.h>
 #include "vm/journal_t.h"
-size_t string_hasher(void * s) { return string_hash((string_t *)s); }
 size_t node_hasher(void * val) { return string_hash(&(((node_t *)val)->name)); }
 // node_t and string_t
 bool node_compare(void * l, void * r) { return string_compare(&(((node_t *)l)->name), (string_t *)r); }
@@ -23,18 +22,57 @@ node_compare2(void * l, void * r) {
 
 em_result
 machine_new(machine_t * out) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   CHKERR(queue_default(&(out->execution_list)));
   CHKERR(dictionary_new(&(out->nodes)));
   CHKERR(memory_manager_new(&(out->memory_manager)));
-  return EM_RESULT_OK;
+  CHKERR(machine_alloc(out, &(out->stack)));
+  CHKERR(object_new_stack(out->stack, MACHINE_STACK_SIZE));
+  //return EM_RESULT_OK;
+ err: return errres;
+}
+
+em_result
+machine_push(machine_t * self, object_t * obj) {
+  em_result errres = EM_RESULT_OK;
+#if DEBUG
+  if(object_kind(self->stack.kind) != EMFRP_OBJECT_STACK) {
+    printf("Illegal stack kind.\n");
+    DEBUGBREAK;
+  }
+#endif
+  object_t * st = self->stack;
+  if(st->value.stack.length == st->value.stack.capacity) {
+    CHKERR(em_reallocarray((void **)&(st->value.stack.data), (void *)(st->value.stack.data), st->value.stack.capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
+    st->value.stack.capacity += MACHINE_STACK_SIZE;
+  }
+  st->value.stack.data[st->value.stack.length] = obj;
+  st->value.stack.length++;
+  // return EM_RESULT_OK;
+ err:  return errres;
+}
+
+em_result
+machine_pop(machine_t * self, object_t ** obj) {
+  em_result errres = EM_RESULT_OK;
+  object_t * st = self->stack;
+#if DEBUG
+  if(object_kind(st->kind) != EMFRP_OBJECT_STACK) {
+    printf("Illegal stack kind.\n");
+    DEBUGBREAK;
+  }
+#endif
+  if (st->value.stack.length == 0) return EM_RESULT_STACK_OVERFLOW;
+  CHKERR(machine_mark_gray(self, st->value.stack.data[st->value.stack.length - 1]));
+  if(obj != nullptr)
+    *obj = st->value.stack.data[st->value.stack.length - 1];
+  st->value.stack.length--;
+  //return EM_RESULT_OK;
  err: return errres;
 }
 
 bool
 string_compare2(void * l, void * r) {  return string_compare(*((string_t **)l), (string_t *)r); }
-void
-node_cleaner(void * v) { node_deep_free((node_t *)v);}
 void
 go_check_dependencies(list_t ** dependencies, node_or_tuple_t * nt) {
   switch(nt->kind) {
@@ -92,7 +130,7 @@ bool has_cyclicreference(string_t * newnode_str, list_t * executionlist_head, li
     exec_sequence_t * es = (exec_sequence_t *)(&(pcur->value));
     if(exec_sequence_marked_modified(es)) continue; // Skip!
     printf("%s <-> %s\n", newnode_str->buffer, es->node_definition->name.buffer);
-    if(exec_sequence_program_kind(es) == EXEC_SEQUENCE_PROGRAM_KIND_AST
+    if(exec_sequence_program_kind(es) == EMFRP_PROGRAM_KIND_AST
        && check_depends_on_ast(es->program.ast, newnode_str))
       return true;
   }
@@ -115,11 +153,11 @@ bool has_cyclicreference2(string_or_tuple_t * newnode_str, list_t * executionlis
 em_result
 machine_add_node(machine_t * self, string_t str, node_t ** node_ptr) {
   em_result errres;
-  if(dictionary_get(&(self->nodes), (void**)node_ptr, string_hasher, node_compare, &str))
+  if(dictionary_get(&(self->nodes), (void**)node_ptr,(size_t(*)(void *)) string_hash, node_compare, &str))
     return EM_RESULT_OK; // Do nothing.
   node_t new_node = { 0 };
   CHKERR(node_new(&new_node, str));
-  CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, (void **)node_ptr));
+  CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, nullptr, nullptr, (void **)node_ptr));
   //return EM_RESULT_OK;
  err:
   return errres;
@@ -148,7 +186,7 @@ em_result
 machine_remove_previous_definition2(machine_t * self, journal_t ** out, string_t * str) {
   node_t * node_ptr;
   if(str == nullptr) return EM_RESULT_INVALID_ARGUMENT;
-  if(!dictionary_get(&(self->nodes), (void**)&node_ptr, string_hasher, node_compare, str)) // Not Found.
+  if(!dictionary_get(&(self->nodes), (void**)&node_ptr, (size_t(*)(void *))string_hash, node_compare, str)) // Not Found.
     return EM_RESULT_OK;
   return remove_defined_node(self->execution_list.head, out, node_ptr);
 }
@@ -247,7 +285,7 @@ machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callba
   em_result errres = EM_RESULT_OK;
   exec_sequence_t new_exec_seq;
   node_t * node_ptr;
-  if(!dictionary_get(&(self->nodes), (void**)&node_ptr, string_hasher, node_compare, &str)) { // If not already defined.
+  if(!dictionary_get(&(self->nodes), (void**)&node_ptr, (size_t(*)(void *))string_hash, node_compare, &str)) { // If not already defined.
     CHKERR(machine_add_node(self, str, &node_ptr));
   } else {
     journal_t * journal = nullptr;
@@ -299,7 +337,7 @@ em_result
 machine_set_value_of_node(machine_t * self, string_t * name, object_t * val) {
   node_t * o = nullptr;
   em_result errres = EM_RESULT_OK;
-  if (!dictionary_get(&(self->nodes), (void **)&o, string_hasher, node_compare, name))
+  if (!dictionary_get(&(self->nodes), (void **)&o, (size_t(*)(void *))string_hash, node_compare, name))
       return EM_RESULT_MISSING_IDENTIFIER;
   CHKERR(machine_mark_gray(self, o->last));
   o->last = o->value;
@@ -313,15 +351,14 @@ em_result
 machine_add_output_node(machine_t * self, string_t name, node_event_delegate_t callback) {
   em_result errres = EM_RESULT_OK;
   node_t * ptrToNode = nullptr;
-  if(dictionary_get(&(self->nodes), (void**)(&ptrToNode), string_hasher, node_compare, &name)) {
+  if(dictionary_get(&(self->nodes), (void**)(&ptrToNode), (size_t(*)(void *))string_hash, node_compare, &name)) {
     ptrToNode->action = callback;
     string_free(&name);
   } else {
     node_t new_node = { 0 };
-    void * _ = nullptr;
     node_new(&new_node, name);
     new_node.action = callback;
-    CHKERR(dictionary_add2(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, node_cleaner, &_));
+    CHKERR(dictionary_add(&(self->nodes), &new_node, sizeof(node_t), node_hasher, node_compare2, nullptr, nullptr));
   }
   //return EM_RESULT_OK;
 err:
