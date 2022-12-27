@@ -302,15 +302,27 @@ get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
   } else if(EXPR_KIND_IS_BIN_OP(v)){
     CHKERR(get_dependencies_ast(v->value.binary.lhs, out));
     CHKERR(get_dependencies_ast(v->value.binary.rhs, out));
-  } else if(v->kind == EXPR_KIND_TUPLE) {
-    for(parser_expression_tuple_list_t * li = &(v->value.tuple);
-	li != nullptr; li = li->next)
-      CHKERR(get_dependencies_ast(li->value, out));
-  } else if(v->kind == EXPR_KIND_IF) {
-    CHKERR(get_dependencies_ast(v->value.ifthenelse.cond, out));
-    CHKERR(get_dependencies_ast(v->value.ifthenelse.then, out));
-    CHKERR(get_dependencies_ast(v->value.ifthenelse.otherwise, out));
-  }
+  } else switch(v->kind) {
+    case EXPR_KIND_TUPLE:
+      for(parser_expression_tuple_list_t * li = &(v->value.tuple);
+          li != nullptr; li = li->next)
+        CHKERR(get_dependencies_ast(li->value, out));
+      break;
+    case EXPR_KIND_IF:
+      CHKERR(get_dependencies_ast(v->value.ifthenelse.cond, out));
+      CHKERR(get_dependencies_ast(v->value.ifthenelse.then, out));
+      CHKERR(get_dependencies_ast(v->value.ifthenelse.otherwise, out));
+      break;
+    case EXPR_KIND_FUNCCALL:
+      CHKERR(get_dependencies_ast(v->value.funccall.callee, out));
+      if(v->value.funccall.arguments.value != nullptr) {
+        for(parser_expression_tuple_list_t * li = &(v->value.funccall.arguments);
+            li != nullptr; li = li->next)
+          CHKERR(get_dependencies_ast(li->value, out));
+      }
+      break;
+    default: break;
+    }
   return EM_RESULT_OK;
  err:
   return errres;
@@ -323,15 +335,24 @@ check_depends_on_ast(parser_expression_t * v, string_t * str) {
     return string_compare(&(v->value.identifier), str);
   else if(EXPR_KIND_IS_BIN_OP(v))
     return check_depends_on_ast(v->value.binary.lhs, str) || check_depends_on_ast(v->value.binary.rhs, str);
-  else if(v->kind == EXPR_KIND_TUPLE) {
-    for(parser_expression_tuple_list_t * li = &(v->value.tuple);
-	li != nullptr; li = li->next)
-      if(check_depends_on_ast(li->value, str)) return true;
-    return false;	 
-  } else if(v->kind == EXPR_KIND_IF) {
-    return check_depends_on_ast(v->value.ifthenelse.cond, str)
-      || check_depends_on_ast(v->value.ifthenelse.then, str)
-      || check_depends_on_ast(v->value.ifthenelse.otherwise, str);
+  else switch(v->kind) {
+    case EXPR_KIND_TUPLE:
+      for(parser_expression_tuple_list_t * li = &(v->value.tuple);
+          li != nullptr; li = li->next)
+        if(check_depends_on_ast(li->value, str)) return true;
+      return false;	 
+    case EXPR_KIND_IF:
+      return check_depends_on_ast(v->value.ifthenelse.cond, str)
+        || check_depends_on_ast(v->value.ifthenelse.then, str)
+        || check_depends_on_ast(v->value.ifthenelse.otherwise, str);
+    case EXPR_KIND_FUNCCALL:
+      if(check_depends_on_ast(v->value.funccall.callee, str)) return true;
+      if(v->value.funccall.arguments.value != nullptr) {
+        for(parser_expression_tuple_list_t * li = &(v->value.funccall.arguments);
+            li != nullptr; li = li->next)
+          if(check_depends_on_ast(li->value, str)) return true;
+      }
+      return false;	 
   }
   return false;
 }
