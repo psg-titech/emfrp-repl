@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #include "vm/machine.h"
@@ -28,6 +28,8 @@ machine_new(machine_t * out) {
   CHKERR(memory_manager_new(&(out->memory_manager)));
   CHKERR(machine_alloc(out, &(out->stack)));
   CHKERR(object_new_stack(out->stack, MACHINE_STACK_SIZE));
+  out->variable_table = nullptr;
+  CHKERR(machine_new_variable_table(out));
   //return EM_RESULT_OK;
  err: return errres;
 }

@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #pragma once
@@ -148,7 +148,7 @@ typedef struct parser_expression_t {
       // ! Reference Count
       size_t reference_count;
       // ! Argument List
-      string_or_tuple_t * arguments;
+      list_t /*<string_or_tuple_t>*/ * arguments;
       // ! Body
       struct parser_expression_t * body;
     } function;
@@ -205,7 +205,7 @@ void parser_node_free_deep(parser_node_t * pn);
 
 
 static inline string_or_tuple_t *
-parser_node_identifier_new(string_t * str) {
+parser_deconstructor_new(string_t * str) {
   string_or_tuple_t * v;
   if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
     return nullptr;
@@ -215,7 +215,7 @@ parser_node_identifier_new(string_t * str) {
 }
 
 static inline string_or_tuple_t *
-parser_node_identifiers_new(list_t * li) {
+parser_deconstructors_new(list_t * li) {
   string_or_tuple_t * v;
   if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
     return nullptr;
@@ -225,7 +225,7 @@ parser_node_identifiers_new(list_t * li) {
 }
 
 static inline list_t /*<string_or_tuple_t>*/ *
-parser_node_identifiers_prepend(string_or_tuple_t * head,
+parser_deconstructors_prepend(string_or_tuple_t * head,
 			    list_t /*<string_or_tuple_t>*/ * tail) {
   if(list_add2(&tail, string_or_tuple_t, head))
     return nullptr;
@@ -359,6 +359,51 @@ parser_expression_tuple_prepend(parser_expression_t * self, parser_expression_t 
   self->value.tuple.next = new_tl;
   self->value.tuple.value = inner;
   return self;
+}
+
+// ! Constructor of function expression.
+/* !
+ * \param deconstructors The arguments deconstructor.
+ * \param body The body of the function.
+ * \return The result
+ */
+static inline parser_expression_t *
+parser_expression_new_function(list_t /*<string_or_tuple_t>*/ * deconstructors, parser_expression_t * body) { 
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
+  ret->kind = EXPR_KIND_FUNCTION;
+  ret->value.function.reference_count = 1;
+  ret->value.function.arguments = deconstructors;
+  ret->value.function.body = body;
+  return ret;
+}
+
+// ! Constructor of function call.
+/* !
+ * \param callee The callee
+ * \param arguments The arguments.
+ * \return The result
+ */
+static inline parser_expression_t *
+parser_expression_new_function_call(parser_expression_t * callee, parser_expression_t * arguments) {
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
+#if DEBUG
+  if(arguments != nullptr && arguments->kind != EXPR_KIND_TUPLE){
+    DEBUGBREAK; // NOT TUPLE
+    return;
+  }
+#endif
+  ret->kind = EXPR_KIND_FUNCCALL;
+  ret->value.funccall.callee = callee;
+  if(arguments == nullptr) {
+    ret->value.funccall.arguments.value = nullptr;
+  } else
+    ret->value.funccall.arguments = arguments->value.tuple;
+  em_free(arguments);
+  return ret;
 }
 
 // ! Freeing parser_expression_t.

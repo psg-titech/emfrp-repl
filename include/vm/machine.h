@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/25
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #pragma once
@@ -45,6 +45,32 @@ typedef struct machine_t {
  * \return The status code
  */
 em_result machine_new(machine_t * out);
+
+// ! Add a node(with an AST program).
+/* !
+ * \param self The machine
+ * \param n The AST of the node.
+ * \return The status code
+ */
+em_result machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n);
+
+// ! Add a node(a input node).
+/* !
+ * \param self The machine
+ * \param str Name of the node
+ * \param callback The callback of node. (Nullable)
+ * \return The status code
+ */
+em_result machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callback);
+
+// ! Search value of the node.
+/* !
+ * \param self The machine
+ * \param out The result
+ * \param name Name of the node
+ * \return Whether found or not
+ */
+bool machine_lookup_node(machine_t * self, node_t ** out, string_t * name);
 
 // ! Push a object into the stack.
 /* !
@@ -116,6 +142,7 @@ machine_new_variable_table(machine_t * self) {
   variable_table_t * v = nullptr;
   CHKERR(em_malloc((void**)&v, sizeof(variable_table_t)));
   CHKERR(variable_table_new(self, v, self->variable_table));
+  self->variable_table = v;
  err: return errres;
 }
 
@@ -154,34 +181,14 @@ machine_assign_variable(machine_t * self, string_t * name, object_t * value) {
  */
 static inline bool
 machine_lookup_variable(machine_t * self,  object_t ** out, string_t * name) {
-  return variable_table_lookup(self->variable_table, out, name);
+  if(variable_table_lookup(self->variable_table, out, name)) return true;
+  node_t * no;
+  if(machine_lookup_node(self, &no, name)) {
+    *out = no->value;
+    return true;
+  }
+  return false;
 }
-
-// ! Add a node(with an AST program).
-/* !
- * \param self The machine
- * \param n The AST of the node.
- * \return The status code
- */
-em_result machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n);
-
-// ! Add a node(a input node).
-/* !
- * \param self The machine
- * \param str Name of the node
- * \param callback The callback of node. (Nullable)
- * \return The status code
- */
-em_result machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callback);
-
-// ! Search value of the node.
-/* !
- * \param self The machine
- * \param out The result
- * \param name Name of the node
- * \return Whether found or not
- */
-bool machine_lookup_node(machine_t * self, node_t ** out, string_t * name);
 
 // ! Is the node defined?
 /* !
@@ -206,7 +213,6 @@ em_result machine_indicate(machine_t * self, string_t * names, int count_names);
  * \param val the object to be set.
  */
 em_result machine_set_value_of_node(machine_t * self, string_t * name, object_t * val);
-
 
 // ! Register the output node
 /* !

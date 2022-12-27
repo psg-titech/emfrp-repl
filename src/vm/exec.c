@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/25
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -60,16 +60,16 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
     switch(kind) {
     case EXPR_KIND_EQUAL:
       if(lro->kind != rro->kind) {
-	*out = &object_false;
-	goto ok;
+        *out = &object_false;
+        goto ok;
       }
       // Add here if you added the new type.
       *out = &object_true;
       goto ok;
     case EXPR_KIND_NOT_EQUAL:
       if(lro->kind != rro->kind) {
-	*out = &object_true;
-	goto ok;
+        *out = &object_true;
+        goto ok;
       }
       // Add here if you added the new type.
       *out = &object_true;
@@ -154,38 +154,38 @@ exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) 
  err_state: return errres;
 }
 
-
 em_result
-exec_funccall_set_args(machine_t * machine, string_or_tuple_t * nt, object_t * v) {
+exec_funccall_set_args(machine_t * machine, list_t /*<string_or_tuple_t>*/ * nt, object_t * v) {
   em_result errres;
-  if(nt->isString){
-    return machine_assign_variable(machine, nt->value.string, v);
-  } else {
-    if(!object_is_pointer(v) || v == nullptr) return EM_RESULT_TYPE_MISMATCH;
-    list_t /* <string_or_tuple_t> */ * al = nt->value.tuple;
-    int len = 0;
-    for(al = nt->value.tuple; al != nullptr; al = LIST_NEXT(al)) len++;
-    al = nt->value.tuple;
-    
-    if(object_kind(v) == EMFRP_OBJECT_TUPLE1) {
-      if(len != 1) return EM_RESULT_TYPE_MISMATCH;
-      return exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->value)),
-				    v->value.tuple1.i0);
-    } else if(object_kind(v) == EMFRP_OBJECT_TUPLE2) {
-      if(len != 2) return EM_RESULT_TYPE_MISMATCH;
-      CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->value)),
-				    v->value.tuple2.i0));
-      CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(nt->value.tuple->next->value)),
-				    v->value.tuple2.i1));
-      return EM_RESULT_OK;
-    } else if(object_kind(v) == EMFRP_OBJECT_TUPLEN){
-      if(len != v->value.tupleN.length) return EM_RESULT_TYPE_MISMATCH;
-      for(int i = 0; i < v->value.tupleN.length; ++i, al = LIST_NEXT(al)) {
-	CHKERR(exec_funccall_set_args(machine, (string_or_tuple_t *)(&(al->value)), object_tuple_ith(v, i)));
-      }
-      return EM_RESULT_OK;
-    } else
-      return EM_RESULT_TYPE_MISMATCH;
+  int len = 0;
+  for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
+  if(!object_is_pointer(v)) return EM_RESULT_INVALID_ARGUMENT;
+  if(v == nullptr) {
+    if(len == 0) return EM_RESULT_OK;
+    else return EM_RESULT_INVALID_ARGUMENT;
+  }
+  object_t ** obj;
+  switch(object_kind(v)) {
+  case EMFRP_OBJECT_TUPLE1:
+    if(len != 1) return EM_RESULT_INVALID_ARGUMENT;
+    obj = &(v->value.tuple1.i0);
+    break;
+  case EMFRP_OBJECT_TUPLE2:
+    if(len != 2) return EM_RESULT_INVALID_ARGUMENT;
+    obj = &(v->value.tuple2.i0);
+    break;
+  case EMFRP_OBJECT_TUPLEN:
+    if(len != v->value.tupleN.length) return EM_RESULT_INVALID_ARGUMENT;
+    obj = v->value.tupleN.data;
+    break;
+  }
+  int i = 0;
+  for(list_t * l = nt; l != nullptr; l = LIST_NEXT(l), i++) {
+    string_or_tuple_t * st = (string_or_tuple_t *)&(l->value);
+    if(st->isString)
+      return machine_assign_variable(machine, st->value.string, obj[i]);
+    else
+      CHKERR(exec_funccall_set_args(machine, st->value.tuple, obj[i]));
   }
  err:
   return errres;
@@ -203,9 +203,17 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   if(!object_is_pointer(callee) || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
     return EM_RESULT_TYPE_MISMATCH;
   CHKERR(machine_push(m, callee));
-  CHKERR(exec_tuple(m, &(v->value.funccall.arguments), &args));
-  CHKERR(machine_push(m, args));
+  if(v->value.funccall.arguments.value == nullptr) { // Arity == 0;
+    if(callee->value.function.function.ast->value.function.arguments != nullptr) {
+      errres = EM_RESULT_INVALID_ARGUMENT;
+      goto err;
+    }
+  } else {
+    CHKERR(exec_tuple(m, &(v->value.funccall.arguments), &args));
+    CHKERR(machine_push(m, args));
+  }
   prev_vt = machine_get_variable_table(m);
+  CHKERR(machine_push(m, prev_vt->this_object_ref));
   if(!object_is_pointer(callee->value.function.closure) || callee->value.function.closure == nullptr) {
     CHKERR(machine_set_variable_table(m, nullptr));
   } else if(object_kind(callee->value.function.closure) == EMFRP_OBJECT_VARIABLE_TABLE) {
@@ -218,7 +226,7 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   switch(callee->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:
     CHKERR2(err2, exec_funccall_set_args(m, callee->value.function.function.ast->value.function.arguments, args));
-    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast, out)); break;
+    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast->value.function.body, out)); break;
   default: DEBUGBREAK; break;
   }
   CHKERR2(err2, machine_pop_variable_table(m));
@@ -263,9 +271,8 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       break;
     }
     case EXPR_KIND_IDENTIFIER:
-      if(!machine_lookup_node(m, &id, &(v->value.identifier)))        
+      if(!machine_lookup_variable(m, out, &(v->value.identifier)))        
         return EM_RESULT_MISSING_IDENTIFIER;
-      *out = id->value;
       break;
     case EXPR_KIND_LAST_IDENTIFIER:
       if(!machine_lookup_node(m, &id, &(v->value.identifier)))

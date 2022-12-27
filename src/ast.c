@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #include "ast.h"
@@ -59,6 +59,7 @@ parser_node_free_deep(parser_node_t * pn) {
 
 void
 go_node_name_print(list_t * li) {
+  if(li == nullptr) return;
   printf("(");
   string_or_tuple_t * st = (string_or_tuple_t *)(&(li->value));
   if(st->isString)
@@ -138,20 +139,21 @@ parser_expression_print(parser_expression_t * e) {
       parser_expression_print(e->value.funccall.callee);
       printf(")");
       {
-	printf("(");
-	parser_expression_tuple_list_t * tl = &(e->value.funccall.arguments);
-	while(tl != nullptr) {
-	  parser_expression_print(tl->value);
-	  if(tl->next != nullptr)
-	    printf(", ");
-	  tl = tl->next;
-	}
+        printf("(");
+        parser_expression_tuple_list_t * tl = &(e->value.funccall.arguments);
+        if(tl->value != nullptr) 
+        while(tl != nullptr) {
+          parser_expression_print(tl->value);
+          if(tl->next != nullptr)
+            printf(", ");
+          tl = tl->next;
+        }
 	printf(")");
       }
       break;
     case EXPR_KIND_FUNCTION: {
       printf("(fun");
-      //      go_node_name_print(e->value.function.arguments->tuple);
+      go_node_name_print(e->value.function.arguments);
       printf(" -> (");
       parser_expression_print(e->value.function.body);
       printf("))");
@@ -193,20 +195,21 @@ parser_expression_free(parser_expression_t * expr) {
     case EXPR_KIND_FUNCCALL: {
       parser_expression_tuple_list_t * tl = &expr->value.funccall.arguments;
       while(tl != nullptr) {
-	parser_expression_tuple_list_t * v = tl->next;
-	parser_expression_free(tl->value);
-	free(tl);
-	tl = v;
+        parser_expression_tuple_list_t * v = tl->next;
+        parser_expression_free(tl->value);
+        free(tl);
+        tl = v;
       }
       parser_expression_free(expr->value.funccall.callee);
       break;
     }
     case EXPR_KIND_FUNCTION: {
+      string_or_tuple_t st = {false, .value.tuple = expr->value.function.arguments};
       expr->value.function.reference_count--;
       if(expr->value.function.reference_count > 0) return;
       parser_expression_free(expr->value.function.body);
       
-      string_or_tuple_free_deep(expr->value.function.arguments);
+      string_or_tuple_free_deep(&st);
       em_free(expr->value.function.arguments);
       break;
     }

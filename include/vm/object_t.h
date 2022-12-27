@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/19
+ * @date   2022/12/27
  ------------------------------------------- */
 
 #pragma once
@@ -249,6 +249,7 @@ object_new_function_ast(object_t * out, object_t * closure, parser_expression_t 
   out->value.function.kind = EMFRP_PROGRAM_KIND_AST;
   out->value.function.function.ast = ast;
   ast->value.function.reference_count++;
+  return EM_RESULT_OK;
 }
 
 // ! Construct the new vairbale table object.
