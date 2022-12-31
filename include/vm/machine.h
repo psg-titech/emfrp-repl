@@ -2,19 +2,21 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2022/12/31
  ------------------------------------------- */
 
 #pragma once
 #include "em_result.h"
 #include "collections/list_t.h"
 #include "collections/dictionary_t.h"
-#include "ast.h"
 #include "vm/node_t.h"
-#include "vm/object_t.h"
 #include "vm/gc.h"
 #include "vm/exec_sequence_t.h"
 #include "vm/variable_t.h"
+
+struct object_t;
+struct parser_node_t;
+struct parser_toplevel_t;
 
 #define MACHINE_STACK_SIZE 16
 
@@ -46,13 +48,22 @@ typedef struct machine_t {
  */
 em_result machine_new(machine_t * out);
 
+// ! Execute the given toplevel expression.
+/* !
+ * \param self The machine
+ * \param prog The toplevel expression
+ * \param out The result if it is an expression.
+ * \return The status code
+ */
+em_result machine_exec(machine_t * self, struct parser_toplevel_t * prog, struct object_t ** out);
+
 // ! Add a node(with an AST program).
 /* !
  * \param self The machine
  * \param n The AST of the node.
  * \return The status code
  */
-em_result machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n);
+em_result machine_add_node_ast(machine_t * self, exec_sequence_t ** out, struct parser_node_t * n);
 
 // ! Add a node(a input node).
 /* !
@@ -168,9 +179,18 @@ machine_pop_variable_table(machine_t * self) {
  * \return The result
  */
 static inline em_result
-machine_assign_variable(machine_t * self, string_t * name, object_t * value) {
+machine_assign_variable(machine_t * self, string_t * name, struct object_t * value) {
   return variable_table_assign(self, self->variable_table, name, value);
 }
+
+// ! Assign values to the deconstructor.
+/* !
+ * \param self The machine
+ * \param nt The deconstructor
+ * \param v The tuple object
+ * \return The result
+ */
+em_result machine_assign_variable_tuple(machine_t * self, list_t /*<string_or_tuple_t>*/ * nt, struct object_t * v);
 
 // ! Lookup a value of the variable.
 /* !
@@ -180,7 +200,7 @@ machine_assign_variable(machine_t * self, string_t * name, object_t * value) {
  * \return Whether found or not
  */
 static inline bool
-machine_lookup_variable(machine_t * self,  object_t ** out, string_t * name) {
+machine_lookup_variable(machine_t * self,  struct object_t ** out, string_t * name) {
   if(variable_table_lookup(self->variable_table, out, name)) return true;
   node_t * no;
   if(machine_lookup_node(self, &no, name)) {
@@ -212,7 +232,7 @@ em_result machine_indicate(machine_t * self, string_t * names, int count_names);
  * \param name Name of the node to be changed its value.
  * \param val the object to be set.
  */
-em_result machine_set_value_of_node(machine_t * self, string_t * name, object_t * val);
+em_result machine_set_value_of_node(machine_t * self, string_t * name, struct object_t * val);
 
 // ! Register the output node
 /* !

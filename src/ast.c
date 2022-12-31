@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2022/12/31
  ------------------------------------------- */
 
 #include "ast.h"
@@ -39,10 +39,56 @@ string_or_tuple_free_deep(string_or_tuple_t * st) {
 }
 
 void
+parser_toplevel_free_shallow(parser_toplevel_t * pt) {
+  switch(pt->kind) {
+  case PARSER_TOPLEVEL_KIND_NODE: parser_node_free_shallow(pt->value.node); break;
+  case PARSER_TOPLEVEL_KIND_DATA: parser_data_free_deep(pt->value.data); break;
+  case PARSER_TOPLEVEL_KIND_FUNC: parser_func_free_shallow(pt->value.func); break;
+  case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_free(pt->value.expression); break;
+  }
+  em_free(pt);
+}
+
+void
+parser_toplevel_free_deep(parser_toplevel_t * pt) {
+  switch(pt->kind) {
+  case PARSER_TOPLEVEL_KIND_NODE: parser_node_free_deep(pt->value.node); break;
+  case PARSER_TOPLEVEL_KIND_DATA: parser_data_free_deep(pt->value.data); break;
+  case PARSER_TOPLEVEL_KIND_FUNC: parser_func_free_deep(pt->value.func); break;
+  case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_free(pt->value.expression); break;
+  }
+  em_free(pt);
+}
+
+void
+parser_func_free_shallow(parser_func_t * pf) {
+  string_free(pf->name);
+  em_free(pf);
+}
+
+void
+parser_func_free_deep(parser_func_t * pf) {
+  string_free(pf->name);
+  if(pf->arguments != nullptr) {
+      string_or_tuple_t st = {false, .value.tuple = pf->arguments};
+      string_or_tuple_free_deep(&st);
+  }
+  parser_expression_free(pf->expression);
+  em_free(pf);
+}
+
+void
+parser_data_free_deep(parser_data_t * pd) {
+  string_or_tuple_free_deep(&(pd->name));
+  parser_expression_free(pd->expression);
+  em_free(pd);
+}
+
+void
 parser_node_free_shallow(parser_node_t * pn) {
   string_or_tuple_free_shallow(&(pn->name));
   parser_expression_free(pn->init_expression);
-  free(pn);
+  em_free(pn);
 }
 
 void
@@ -54,7 +100,7 @@ parser_node_free_deep(parser_node_t * pn) {
   }
   parser_expression_free(pn->expression);
   if(pn->init_expression != nullptr) parser_expression_free(pn->init_expression);
-  free(pn);
+  em_free(pn);
 }
 
 void
@@ -79,6 +125,17 @@ go_node_name_print(list_t * li) {
 }
 
 void
+parser_toplevel_print(parser_toplevel_t * t) {
+  switch(t->kind) {
+  case PARSER_TOPLEVEL_KIND_NODE: parser_node_print(t->value.node); break;
+  case PARSER_TOPLEVEL_KIND_DATA: parser_data_print(t->value.data); break;
+  case PARSER_TOPLEVEL_KIND_FUNC: parser_function_print(t->value.func); break;
+  case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_print(t->value.expression); break;
+  default: DEBUGBREAK; break;
+  }
+}
+
+void
 parser_node_print(parser_node_t * n) {
   if(n->name.isString) {
     printf("node %s = ", n->name.value.string->buffer);
@@ -91,6 +148,26 @@ parser_node_print(parser_node_t * n) {
   }
   parser_expression_print(n->expression);
   printf("\n");
+}
+
+void
+parser_data_print(parser_data_t * d) {
+  if(d->name.isString)
+    printf("data %s = ", d->name.value.string->buffer);
+  else {
+    printf("data ");
+    go_node_name_print(d->name.value.tuple);
+    printf(" = ");
+  }
+  parser_expression_print(d->expression);
+}
+
+void
+parser_function_print(parser_func_t * f) {
+  printf("func %s", f->name->buffer);
+  go_node_name_print(f->arguments);
+  printf(" = ");
+  parser_expression_print(f->expression);
 }
 
 void

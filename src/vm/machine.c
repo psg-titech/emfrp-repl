@@ -2,12 +2,14 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2023/1/1
  ------------------------------------------- */
 
-#include "vm/machine.h"
-#include "vm/exec.h"
 #include <stdio.h>
+#include "ast.h"
+#include "vm/machine.h"
+#include "vm/object_t.h"
+#include "vm/exec.h"
 #include "vm/journal_t.h"
 size_t node_hasher(void * val) { return string_hash(&(((node_t *)val)->name)); }
 // node_t and string_t
@@ -33,6 +35,41 @@ machine_new(machine_t * out) {
   //return EM_RESULT_OK;
  err: return errres;
 }
+
+em_result
+machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
+  em_result errres = EM_RESULT_OK;
+  switch(prog->kind) {
+  case PARSER_TOPLEVEL_KIND_EXPR: return exec_ast(self, prog->value.expression, out);
+  case PARSER_TOPLEVEL_KIND_DATA: {
+      parser_data_t * d = prog->value.data;
+      object_t * o = nullptr;
+      CHKERR(exec_ast(self, d->expression, &o));
+      if(d->name.isString) {
+	CHKERR(machine_assign_variable(self, d->name.value.string, o));
+      } else
+	CHKERR(machine_assign_variable_tuple(self, d->name.value.tuple, o));
+      break;
+    }
+  case PARSER_TOPLEVEL_KIND_FUNC: {
+      parser_func_t * f = prog->value.func;
+      parser_expression_t * e = parser_expression_new_function(f->arguments, f->expression);
+      if(e == nullptr) return EM_RESULT_OUT_OF_MEMORY;
+      object_t * o = nullptr;
+      CHKERR(machine_alloc(self, &o));
+      CHKERR(object_new_function_ast(o, machine_get_variable_table(self)->this_object_ref, e));
+      CHKERR(machine_assign_variable(self, f->name, o));
+      break;
+    }
+  case PARSER_TOPLEVEL_KIND_NODE: {
+      exec_sequence_t * _ = nullptr;
+      return machine_add_node_ast(self, &_, prog->value.node);
+    }
+  }
+ err:
+  return errres;
+}
+
 
 em_result
 machine_push(machine_t * self, object_t * obj) {
@@ -73,6 +110,45 @@ machine_pop(machine_t * self, object_t ** obj) {
  err: return errres;
 }
 
+
+em_result
+machine_assign_variable_tuple(machine_t * self, list_t /*<string_or_tuple_t>*/ * nt, object_t * v) {
+  em_result errres;
+  int len = 0;
+  for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
+  if(!object_is_pointer(v)) return EM_RESULT_INVALID_ARGUMENT;
+  if(v == nullptr) {
+    if(len == 0) return EM_RESULT_OK;
+    else return EM_RESULT_INVALID_ARGUMENT;
+  }
+  object_t ** obj;
+  switch(object_kind(v)) {
+  case EMFRP_OBJECT_TUPLE1:
+    if(len != 1) return EM_RESULT_INVALID_ARGUMENT;
+    obj = &(v->value.tuple1.i0);
+    break;
+  case EMFRP_OBJECT_TUPLE2:
+    if(len != 2) return EM_RESULT_INVALID_ARGUMENT;
+    obj = &(v->value.tuple2.i0);
+    break;
+  case EMFRP_OBJECT_TUPLEN:
+    if(len != v->value.tupleN.length) return EM_RESULT_INVALID_ARGUMENT;
+    obj = v->value.tupleN.data;
+    break;
+  }
+  int i = 0;
+  for(list_t * l = nt; l != nullptr; l = LIST_NEXT(l), i++) {
+    string_or_tuple_t * st = (string_or_tuple_t *)&(l->value);
+    if(st->isString)
+      return machine_assign_variable(self, st->value.string, obj[i]);
+    else
+      CHKERR(machine_assign_variable_tuple(self, st->value.tuple, obj[i]));
+  }
+ err:
+  return errres;
+}
+
+
 bool
 string_compare2(void * l, void * r) {  return string_compare(*((string_t **)l), (string_t *)r); }
 void
@@ -95,13 +171,29 @@ go_check_dependencies(list_t ** dependencies, node_or_tuple_t * nt) {
 }
 
 em_result
-check_dependencies(parser_expression_t * prog, list_t ** executionlist_head, list_t *** whereto_insert) {
+check_dependencies(machine_t * self, parser_expression_t * prog, list_t ** executionlist_head, list_t *** whereto_insert) {
   em_result errres;
   list_t * /*<exec_sequence_t *>*/ cur = *executionlist_head;
   list_t ** p = executionlist_head;
   list_t * /*<string_t *>*/ dependencies;
   CHKERR(list_default(&dependencies));
   CHKERR(get_dependencies_ast(prog, &dependencies));
+  {
+    list_t * cur = dependencies;
+    list_t ** p = &dependencies;
+    while(!LIST_IS_EMPTY(&cur)) {
+      object_t * _;
+      if(machine_lookup_variable(self, &_, (string_t *)(dependencies->value))) {
+	*p = cur->next;
+	em_free(cur);
+	cur = *p;
+      } else {
+	p = &(cur->next);
+	cur = LIST_NEXT(cur);
+      }
+    }
+  }
+
   // Search where to insert.
   // Inserted after all dependencies are satisfied.
   while(!LIST_IS_EMPTY(&dependencies)) {
@@ -240,7 +332,7 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
   }
   CHKERR(machine_remove_previous_definition(self, &journal, &(n->name)));
   CHKERR(exec_sequence_new_mono_ast(&new_exec_seq, n->expression, nullptr));
-  CHKERR(check_dependencies(n->expression, &(self->execution_list.head), &whereto_insert));
+  CHKERR(check_dependencies(self, n->expression, &(self->execution_list.head), &whereto_insert));
   if(journal != nullptr // If it contains already-defined nodes
      && has_cyclicreference2(&(n->name), self->execution_list.head, *whereto_insert)
      && (n->as == nullptr || has_cyclicreference(n->as, self->execution_list.head, *whereto_insert))) {

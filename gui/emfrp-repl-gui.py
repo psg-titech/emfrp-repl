@@ -28,7 +28,7 @@ libemfrp = ctypes.cdll.LoadLibrary(librarypath)
 libemfrp.emfrp_create.restype = ctypes.c_void_p
 libemfrp.emfrp_create.argtypes = []
 libemfrp.emfrp_repl.restype = ctypes.c_bool
-libemfrp.emfrp_repl.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+libemfrp.emfrp_repl.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
 libemfrp.emfrp_add_input_node_definition.restype = ctypes.c_bool
 libemfrp.emfrp_add_input_node_definition.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
 libemfrp.emfrp_indicate_node_update.restype = ctypes.c_bool
@@ -50,10 +50,13 @@ commandFrame.pack()
 commandVar = tkinter.StringVar()
 def execCommand():
     s = commandVar.get()
-    returnCode = libemfrp.emfrp_repl(emfrp_t, ctypes.c_char_p(bytes(s, 'ascii')))
+    o = ctypes.c_void_p(0)
+    op = ctypes.pointer(o)
+    returnCode = libemfrp.emfrp_repl(emfrp_t, ctypes.c_char_p(bytes(s, 'ascii')), op)
     logText['state'] = tkinter.NORMAL
     logText.insert('end', '\n' + s)
     logText.insert('end', '\nReturn Code:' + str(returnCode))
+    logText.insert('end', '\nReturn Value:' + str(libemfrp.emfrp_get_integer(o)))
     logText['state'] = tkinter.DISABLED
     commandVar.set('')
 

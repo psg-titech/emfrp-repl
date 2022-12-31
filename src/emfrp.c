@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2023/1/1
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -32,22 +32,22 @@ emfrp_create(void) {
 }
 
 EM_EXPORTDECL bool
-emfrp_repl(emfrp_t * self, char * str) {
+emfrp_repl(emfrp_t * self, char * str, object_t ** out) {
   parser_reader_t parser_reader;
-  parser_node_t * parsed_node;
+  parser_toplevel_t * parsed;
   string_t line;
   string_new1(&line, strdup(str));
   parser_reader_new(&parser_reader, &line);
   parser_context_t * ctx = parser_create(&parser_reader);
-  if(!parser_parse(ctx, (void **)&parsed_node)) {
-    parser_expression_print(parsed_node->expression);
-    exec_sequence_t * es;
-    em_result res = machine_add_node_ast(self->machine, &es, parsed_node);
+  if(!parser_parse(ctx, (void **)&parsed)) {
+    parser_toplevel_print(parsed);
+    printf("\n");
+    em_result res = machine_exec(self->machine, parsed, out);
     if(res != EM_RESULT_OK) {
-      parser_node_free_deep(parsed_node);
+      parser_toplevel_free_deep(parsed);
       goto fail;
     } else
-      parser_node_free_shallow(parsed_node);
+      parser_toplevel_free_shallow(parsed);
   } else
     goto fail;
   parser_destroy(ctx);

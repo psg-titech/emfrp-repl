@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2022/12/31
  ------------------------------------------- */
 #include "emmem.h"
 #include "ast.h"
@@ -113,7 +113,11 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
 	case EMFRP_OBJECT_VARIABLE_TABLE: variable_table_free(cur->value.variable_table.ptr); break;
 	case EMFRP_OBJECT_FUNCTION:
 	  switch(cur->value.function.kind) {
-	  case EMFRP_PROGRAM_KIND_AST: parser_expression_free(cur->value.function.function.ast); break;
+	  case EMFRP_PROGRAM_KIND_AST:
+	    cur->value.function.function.ast->value.function.reference_count--;
+	    if(cur->value.function.function.ast->value.function.reference_count <= 0)
+	      parser_expression_free(cur->value.function.function.ast);
+	    break;
 	  }
 	  break;
 	default: break;

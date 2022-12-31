@@ -28,7 +28,7 @@ typedef struct emfrp_t emfrp_t;
 extern "C" {
 #endif
 EM_EXPORTDECL emfrp_t * emfrp_create(void);
-EM_EXPORTDECL bool emfrp_repl(emfrp_t * self, char * str);
+  EM_EXPORTDECL bool emfrp_repl(emfrp_t * self, char * str, em_object_t ** value);
 EM_EXPORTDECL bool emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_input_node_callback callback);
 EM_EXPORTDECL bool emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value);
 EM_EXPORTDECL bool emfrp_update(emfrp_t * self);

@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2022/12/31
  ------------------------------------------- */
 
 #pragma once
@@ -166,6 +166,183 @@ typedef struct parser_node_t {
   // ! `as` Expression
   string_t * as;
 } parser_node_t;
+
+// ! Function Definition.
+typedef struct parser_func_t {
+  // ! The name.
+  string_t * name;
+  // ! The arguments.
+  list_t /*<string_or_tuple_t>*/ * arguments;
+  // ! The body.
+  parser_expression_t * expression;
+} parser_func_t;
+
+typedef struct parser_data_t {
+  // ! The name.
+  string_or_tuple_t name;
+  // ! The body.
+  parser_expression_t * expression;
+} parser_data_t;
+
+// ! Toplevel kind(parser_toplevel_t::kind)
+typedef enum parser_toplevel_kind {
+  // ! parser_toplevel_t::value is parser_node_t.
+  PARSER_TOPLEVEL_KIND_NODE,
+  // ! parser_toplevel_t::value is parser_func_t.
+  PARSER_TOPLEVEL_KIND_FUNC,
+  // ! parser_toplevel_t::value is parser_data_t.
+  PARSER_TOPLEVEL_KIND_DATA,
+  // ! parser_toplevel_t::value is parser_expression_t.
+  PARSER_TOPLEVEL_KIND_EXPR
+} parser_toplevel_kind;
+
+// ! Toplevel Expression.
+typedef struct parser_toplevel_t {
+  // ! Kind of value.
+  parser_toplevel_kind kind;
+  // ! The value.
+  union {
+    parser_node_t * node;
+    parser_func_t * func;
+    parser_data_t * data;
+    parser_expression_t * expression;
+  } value;
+} parser_toplevel_t;
+
+// ! Constructor of parser_toplevel_t(node)
+/* !
+ * \param n The node.
+ * \return Malloc-ed and constructed parser_toplevel_t
+ */
+static inline parser_toplevel_t *
+parser_toplevel_new_node(parser_node_t * n) {
+  parser_toplevel_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_toplevel_t)))
+    return nullptr;
+  ret->kind = PARSER_TOPLEVEL_KIND_NODE;
+  ret->value.node = n;
+  return ret;
+}
+
+// ! Constructor of parser_toplevel_t(func)
+/* !
+ * \param f The function.
+ * \return Malloc-ed and constructed parser_toplevel_t
+ */
+static inline parser_toplevel_t *
+parser_toplevel_new_func(parser_func_t * f) {
+  parser_toplevel_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_toplevel_t)))
+    return nullptr;
+  ret->kind = PARSER_TOPLEVEL_KIND_FUNC;
+  ret->value.func = f;
+  return ret;
+}
+
+// ! Constructor of parser_toplevel_t(data)
+/* !
+ * \param d The data definition.
+ * \return Malloc-ed and constructed parser_toplevel_t
+ */
+static inline parser_toplevel_t *
+parser_toplevel_new_data(parser_data_t * d) {
+  parser_toplevel_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_toplevel_t)))
+    return nullptr;
+  ret->kind = PARSER_TOPLEVEL_KIND_DATA;
+  ret->value.data = d;
+  return ret;
+}
+
+// ! Constructor of parser_toplevel_t(expr)
+/* !
+ * \param e The expression.
+ * \return Malloc-ed and constructed parser_toplevel_t
+ */
+static inline parser_toplevel_t *
+parser_toplevel_new_expr(parser_expression_t * e) {
+  parser_toplevel_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_toplevel_t)))
+    return nullptr;
+  ret->kind = PARSER_TOPLEVEL_KIND_EXPR;
+  ret->value.expression = e;
+  return ret;
+}
+
+// ! Shallow free for parser_node_t.
+/* !
+ * This does not free strings, and expressions.
+ * This is used when execution is succeeded.
+ * \param pn To be freed.
+ */
+void parser_toplevel_free_shallow(parser_toplevel_t * pt);
+
+// ! Deep free for parser_node_t.
+/* !
+ * This does free strings, and expressions.
+ * This is used when execution is failed.
+ * \param pn To be freed.
+ */
+void parser_toplevel_free_deep(parser_toplevel_t * pt);
+
+// ! Constructor of parser_func_t
+/* !
+ * \param name The name.
+ * \param dec The arguments.
+ * \param e The body.
+ * \return Malloc-ed and constructed parser_func_t
+ */
+static inline parser_func_t *
+parser_func_new(string_t * name, list_t /*<string_or_tuple_t>*/ * dec, parser_expression_t * e) {
+  parser_func_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_func_t)))
+    return nullptr;
+  ret->name = name;
+  ret->arguments = dec;
+  ret->expression = e;
+  return ret;
+}
+
+// ! Shallow free for parser_func_t.
+/* !
+ * This does not arguments and parser_func_t::expression.
+ * This is used when adding a func succeeded.
+ * \param pn To be freed.
+ */
+void parser_func_free_shallow(parser_func_t * pf);
+
+// ! Deep free for parser_func_t.
+/* !
+ * This does free arguments and parser_func_t::expression.
+ * This is used when adding a func failed.
+ * \param pn To be freed.
+ */
+void parser_func_free_deep(parser_func_t * pf);
+
+// ! Constructor of parser_data_t
+/* !
+ * \param dec The names.
+ * \param e The body.
+ * \return Malloc-ed and constructed parser_data_t
+ */
+static inline parser_data_t *
+parser_data_new(string_or_tuple_t * dec, parser_expression_t * e) {
+  parser_data_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_data_t)))
+    return nullptr;
+  ret->name = *dec;
+  em_free(dec);
+  ret->expression = e;
+  return ret;
+}
+
+// ! Deep free for parser_data_t.
+/* !
+ * This does free parser_data_t::expression.
+ * This is used when adding a data failed.
+ * \param pn To be freed.
+ */
+void parser_data_free_deep(parser_data_t * pd);
 
 // ! Constructor of parser_node_t.
 /* !
@@ -416,16 +593,32 @@ parser_expression_free(parser_expression_t * expr);
 // ! Used for parser_expression_print.
 extern const char * const binary_op_table[];
 
+// ! Print parser_toplevel_t to stdout.
+/* !
+ * \ param t The toplevel expression to be printed.
+ */
+void parser_toplevel_print(parser_toplevel_t * t);
+
 // ! Print parser_node_t to stdout.
 /* !
  * \param n The node definition to be printed.
  */
-void
-parser_node_print(parser_node_t * n);
+void parser_node_print(parser_node_t * n);
+
+// ! Print parser_data_t to stdout.
+/* !
+ * \param d The data definition to be printed.
+ */
+void parser_data_print(parser_data_t * d);
+
+// ! Print parser_func_t to stdout.
+/* !
+ * \param f The function definition to be printed.
+ */
+void parser_function_print(parser_func_t * f);
 
 // ! Print parser_expression_t to stdout.
 /* !
  * \param n The expression to be printed.
  */
-void
-parser_expression_print(parser_expression_t * e);
+void parser_expression_print(parser_expression_t * e);

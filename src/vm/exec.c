@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2022/12/31
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -155,43 +155,6 @@ exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) 
 }
 
 em_result
-exec_funccall_set_args(machine_t * machine, list_t /*<string_or_tuple_t>*/ * nt, object_t * v) {
-  em_result errres;
-  int len = 0;
-  for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
-  if(!object_is_pointer(v)) return EM_RESULT_INVALID_ARGUMENT;
-  if(v == nullptr) {
-    if(len == 0) return EM_RESULT_OK;
-    else return EM_RESULT_INVALID_ARGUMENT;
-  }
-  object_t ** obj;
-  switch(object_kind(v)) {
-  case EMFRP_OBJECT_TUPLE1:
-    if(len != 1) return EM_RESULT_INVALID_ARGUMENT;
-    obj = &(v->value.tuple1.i0);
-    break;
-  case EMFRP_OBJECT_TUPLE2:
-    if(len != 2) return EM_RESULT_INVALID_ARGUMENT;
-    obj = &(v->value.tuple2.i0);
-    break;
-  case EMFRP_OBJECT_TUPLEN:
-    if(len != v->value.tupleN.length) return EM_RESULT_INVALID_ARGUMENT;
-    obj = v->value.tupleN.data;
-    break;
-  }
-  int i = 0;
-  for(list_t * l = nt; l != nullptr; l = LIST_NEXT(l), i++) {
-    string_or_tuple_t * st = (string_or_tuple_t *)&(l->value);
-    if(st->isString)
-      return machine_assign_variable(machine, st->value.string, obj[i]);
-    else
-      CHKERR(exec_funccall_set_args(machine, st->value.tuple, obj[i]));
-  }
- err:
-  return errres;
-}
-
-em_result
 exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   object_t * callee = nullptr;
   object_t * args = nullptr;
@@ -225,7 +188,7 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   CHKERR2(err2, machine_new_variable_table(m));
   switch(callee->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:
-    CHKERR2(err2, exec_funccall_set_args(m, callee->value.function.function.ast->value.function.arguments, args));
+    CHKERR2(err2, machine_assign_variable_tuple(m, callee->value.function.function.ast->value.function.arguments, args));
     CHKERR2(err2, exec_ast(m, callee->value.function.function.ast->value.function.body, out)); break;
   default: DEBUGBREAK; break;
   }

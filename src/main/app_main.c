@@ -2,7 +2,7 @@
  * @file   app_main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2023/1/1
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -78,29 +78,23 @@ void mainTask(void) {
     }
     parser_reader_new(&parser_reader, &line);
     parser_context_t *ctx = parser_create(&parser_reader);
-    if(!parser_parse(ctx, (void **)&parsed_node)) {
-      exec_sequence_t * es = nullptr;
+    if(!parser_parse(ctx, (void **)&parsed)) {
+      object_t * o = nullptr;
       printf("Heap free size: %d\n", esp_get_free_heap_size());
-      parser_node_print(parsed_node);
-      em_result res = machine_add_node_ast(&m, &es, parsed_node);
+      parser_toplevel_print(parsed);
+      printf("\n");
+      em_result res = machine_exec(&m, parsed, &o);
+      // We have to think free_deep or free_shallow.
       if(res != EM_RESULT_OK) {
-	printf("add node failure: %s\n", EM_RESULT_STR_TABLE[res]);
-	parser_node_free_deep(parsed_node);
-	goto freeing;
-      }
-      res = exec_ast(&m, parsed_node->expression,  &result_object);
-      // We have to think parsed_node->name is freed or not.
-      if(res != EM_RESULT_OK) {
+	printf("machine_exec failure(%d): %s\n", res, EM_RESULT_STR_TABLE[res]);
 	printf("%s\n", EM_RESULT_STR_TABLE[res]);
-	parser_node_free_deep(parsed_node);
+	parser_toplevel_free_deep(parsed);
       } else {
-	exec_sequence_update_value_given_object(&m, es, result_object);
-	parser_node_free_shallow(parsed_node);
+	parser_toplevel_free_shallow(parsed);
 	printf("OK, ");
-	object_print(result_object);
+	object_print(o);
 	printf("\n");
       }
-    freeing:
       machine_debug_print_definitions(&m);
     }
     parser_destroy(ctx);
