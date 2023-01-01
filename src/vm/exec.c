@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/31
+ * @date   2023/1/1
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -185,6 +185,7 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
     errres = EM_RESULT_INVALID_ARGUMENT;
     goto err;
   }
+  CHKERR2(err2, machine_push(m, prev_vt->this_object_ref));
   CHKERR2(err2, machine_new_variable_table(m));
   switch(callee->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:

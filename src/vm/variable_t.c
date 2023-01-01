@@ -2,7 +2,7 @@
  * @file   variable_t.c
  * @brief  The variable table.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/1
  ------------------------------------------- */
 #include "vm/variable_t.h"
 #include "string.h"
@@ -77,7 +77,7 @@ variable_table_free(variable_table_t * v) {
   FOREACH_DICTIONARY(li, &(v->table)) {
     while(li != nullptr) {
       list_t * ne = LIST_NEXT(li);
-      variable_deep_free((variable_t *)((li->value)));
+      variable_deep_free((variable_t *)(&(li->value)));
       em_free(li);
       li = ne;
     }

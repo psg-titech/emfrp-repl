@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/31
+ * @date   2023/1/1
  ------------------------------------------- */
 #include "emmem.h"
 #include "ast.h"
@@ -62,7 +62,7 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
     if(self->worklist_top == 0) break;
     self->worklist_top--;
     object_t * cur = self->worklist[self->worklist_top];
-    switch(cur->kind) {
+    switch(object_kind(cur)) {
     case EMFRP_OBJECT_TUPLE1:
       CHKERR(push_worklist(self, cur->value.tuple1.i0));
       break;
@@ -87,6 +87,7 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
       }
       if(cur->value.variable_table.ptr->parent != nullptr)
 	return push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref);
+      break;
     }
     case EMFRP_OBJECT_FUNCTION: return push_worklist(self, cur->value.function.closure);
     case EMFRP_OBJECT_FREE:
@@ -103,7 +104,7 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
   for(int i = 0; i < sweep_limit; ++i) {
     if(self->sweeper >= MEMORY_MANAGER_HEAP_SIZE) break;
     object_t * cur = &self->space[self->sweeper];
-    if(cur->kind != EMFRP_OBJECT_FREE) {
+    if(object_kind(cur) != EMFRP_OBJECT_FREE) {
       if(object_is_marked(cur))
 	object_unmark(cur);
       else {
@@ -142,6 +143,7 @@ memory_manager_gc(struct machine_t * self,
     if(mm->remaining <= MEMORY_MANAGER_GC_START_SIZE) {
       mm->worklist_top = 0;
       CHKERR(push_worklist(mm, self->stack));
+      CHKERR(push_worklist(mm, machine_get_variable_table(self)->this_object_ref));
       list_t * li;
       FOREACH_DICTIONARY(li, &self->nodes) {
 	void * v;
