@@ -14,8 +14,11 @@ This is the tested environment.
 
 # How to build
 ## How to build for own devices
-### FreeBSD/DragonFlyBSD
-1. Execute `project/common/setup-bsd.sh` as privilaged user.
+### clang/gcc based OSes
+1. Execute `project/common/setup-?.sh` as a privilaged user.  
+   FreeBSD and DragonFly: setup-bsd.sh  
+   macOS: setup-macos-brew.sh (brew required)  
+   Haiku OS: setup-haiku.sh  
 2. Execute the Makefile in `./packcc/build/clang` or `./packcc/build/gcc`.
 3. Open `project/pc/`.
 4. `$ cmake -B build`
@@ -32,23 +35,6 @@ This is the tested environment.
 4. Open `project/pc/build/emfrp-repl.sln`.
 5. Build and debug!
 
-### Haiku OS
-1. Execute `project/common/setup-haiku.sh`.
-2. Execute the Makefile in `./packcc/build/gcc`.
-3. Open `project/pc/`.
-4. `$ cmake -B build`
-5. `$ cd build`
-6. `$ make`
-7. `$ ./emfrp-repl`
-
-### macOS
-1. Execute `project/common/setup-macos-brew.sh` as privilaged user.
-2. Execute the Makefile in `packcc/build/clang`.
-3. Open `project/pc/`.
-6. `$ cmake -B build`
-7. `$ make` in the build directory.
-8. `$ ./emfrp-repl`
-
 ### GUI Emfrp-REPL
 We recommend not to use on macOS.  
 You had better use Linux, or Windows on virtual machines if you use macOS.  
@@ -56,11 +42,13 @@ You had better use Linux, or Windows on virtual machines if you use macOS.
 1. Execute `gui/emfrp-repl-gui.py` by Python 3.x.
 
 ## Compilation for ESP32
+### Install esp-idf SDK.
 You need esp-idf SDK. available on: https://github.com/espressif/esp-idf  
+Execute `install.ps1`, or `install.sh` in the esp-idf repository.
 
-1. Execute `install.ps1`, or `install.sh` in the esp-idf repository.
-2. Execute `export.ps1`, or `export.ps1` in the esp-idf repository.
-3. Execute `project/esp-idf/gen_parser.bat`, or `project/esp-idf/gen_parser.sh`. You need to execute these files if you rewrite `parser.peg`. This comes from esp-idf CMake Project System's limitations.
-4. Open `project/esp-idf`
-6. Execute `idf.py set-target esp32` in your first time.
+### Build this project.
+1. Execute `export.ps1`, or `export.ps1` in the esp-idf repository.
+2. Execute `project/esp-idf/gen_parser.bat`, or `project/esp-idf/gen_parser.sh`. You need to execute these files if you rewrite `parser.peg`. This comes from esp-idf CMake Project System's limitations.
+3. Open `project/esp-idf`
+4. Execute `idf.py set-target esp32` in your first time.
 5. Execute `idf.py build` and flash `idf.py flash -p <PORT>`, and then monitor by `idf.py monitr -p <PORT>`.
