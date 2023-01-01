@@ -57,7 +57,7 @@ memory_manager_push_worklist(memory_manager_t * self, object_t * obj) {
 
 em_result
 memory_manager_mark(memory_manager_t * self, int mark_limit) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   for(int i = 0; i < mark_limit; ++i) {
     if(self->worklist_top == 0) break;
     self->worklist_top--;
@@ -192,8 +192,10 @@ memory_manager_alloc(machine_t * self, object_t ** o) {
  err:
   return errres;
 }
+
 em_result memory_manager_force_gc(memory_manager_t * self) {
   DEBUGBREAK;
+  return 0;
 }
 
 void

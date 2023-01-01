@@ -35,7 +35,7 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 add_library(libemfrp-repl SHARED ${SOURCES} ${PROJ_DIR}/src/emfrp.c)
 
 if (UNIX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -Wmissing-noreturn")
     include_directories(
         PRIVATE
             ${PROJ_DIR}/include
