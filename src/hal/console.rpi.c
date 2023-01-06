@@ -48,23 +48,21 @@ static const char * PROMPT = "emfrp : ";
 // This does not work.
 em_result
 read_line(string_t * recycle_buffer) {
-  int len = 0, start = 0;
+  int start = 0;
   printf(PROMPT);
   fflush(stdout);
   while(1) {
     char ch;
     scanf("%c", &ch);
     int count = 1 + start;
-    for(int i = start; i < count; ++i) {
-      // Normaly, CR(\r) represents to go to the new line.
-      if(buf[i] == '\n' || buf[i] == '\r') {
-        printf("%c", &buf[start]);
-      	start = execute_control_sequence(len, start, buf);
-	      goto end;
-      }
+    buf[start] = ch;
+    // Normaly, CR(\r) represents to go to the new line.
+    printf("%c", buf[start]);
+    if(ch == '\n' || ch == '\r') {
+      start = execute_control_sequence(1, start, buf);
+      goto end;
     }
-    printf("%c", &buf[start]);
-    start = execute_control_sequence(len, start, buf);
+    start = execute_control_sequence(1, start, buf);
   }
  end:
   buf[start] = '\0';
