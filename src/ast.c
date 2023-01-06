@@ -261,6 +261,8 @@ parser_expression_free(parser_expression_t * expr) {
       break;
     case EXPR_KIND_TUPLE: {
       parser_expression_tuple_list_t * tl = &expr->value.tuple;
+	    parser_expression_free(tl->value);
+      tl = tl->next;
       while(tl != nullptr) {
 	parser_expression_tuple_list_t * v = tl->next;
 	parser_expression_free(tl->value);
