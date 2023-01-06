@@ -21,7 +21,7 @@ parser_reader_getchar(parser_reader_t * reader);
 %source {
 #include "ast.h"
 #include "misc.h"
-#if defined(__ESP_IDF__)
+#if defined(__ESP_IDF__) || defined(RPI_PICO)
 #define PCC_POOL_MIN_SIZE 256
 #define PCC_BUFFER_MIN_SIZE 8
 #endif

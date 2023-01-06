@@ -59,7 +59,7 @@ void setup_gpio_test(void) {
 void mainTask(void) {
   string_t line;
   parser_reader_t parser_reader;
-  parser_node_t * parsed_node;
+  parser_toplevel_t * parsed;
   object_t * result_object;
   string_null(&line);
   initialize_console();
