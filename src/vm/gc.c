@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/1
+ * @date   2023/1/9
  ------------------------------------------- */
 #include "emmem.h"
 #include "ast.h"
@@ -109,6 +109,7 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
 	object_unmark(cur);
       else {
 	switch(object_kind(cur)) {
+	case EMFRP_OBJECT_SYMBOL: string_free(&(cur->value.symbol.value)); break;
 	//case EMFRP_OBJECT_STACK:
 	case EMFRP_OBJECT_TUPLEN: em_free(cur->value.tupleN.data); break;
 	case EMFRP_OBJECT_VARIABLE_TABLE: variable_table_free(cur->value.variable_table.ptr); break;

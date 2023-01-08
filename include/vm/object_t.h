@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/27
+ * @date   2023/1/9
  ------------------------------------------- */
 
 #pragma once
@@ -236,6 +236,13 @@ object_new_tupleN(object_t * out, size_t size) {
   out->kind = EMFRP_OBJECT_TUPLEN | (out->kind & 1);
   out->value.tupleN.length = size;
   return em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *));
+}
+
+static inline em_result
+object_new_symbol(object_t * out, string_t symbol) {
+  out->kind = EMFRP_OBJECT_SYMBOL | (out->kind & 1);
+  out->value.symbol.value = symbol;
+  return EM_RESULT_OK;
 }
 
 static inline em_result

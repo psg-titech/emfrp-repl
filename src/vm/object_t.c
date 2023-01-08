@@ -2,7 +2,7 @@
  * @file   object_t.c
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/9
  ------------------------------------------- */
 #include "vm/object_t.h"
 #include <stdio.h>
@@ -24,6 +24,7 @@ object_print(object_t * v) {
     printf("false");
   else {
     switch(object_kind(v)) {
+    case EMFRP_OBJECT_SYMBOL: printf("%s", v->value.symbol.value.buffer); break;
     case EMFRP_OBJECT_STRING: printf("\"%s\"",v->value.string.value.buffer); break;
     case EMFRP_OBJECT_TUPLE1:
       printf("(");
