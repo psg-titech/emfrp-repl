@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/1
+ * @date   2023/1/9
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -81,9 +81,11 @@ machine_push(machine_t * self, object_t * obj) {
   }
 #endif
   object_t * st = self->stack;
-  if(st->value.stack.length == st->value.stack.capacity) {
-    CHKERR(em_reallocarray((void **)&(st->value.stack.data), (void *)(st->value.stack.data), st->value.stack.capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
-    st->value.stack.capacity += MACHINE_STACK_SIZE;
+  int capacity = 0;
+  CHKERR(object_get_int(st->value.stack.capacity, &capacity))
+  if(st->value.stack.length == capacity) {
+    CHKERR(em_reallocarray((void **)&(st->value.stack.data), (void *)(st->value.stack.data), capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
+    CHKERR(object_new_int(&(st->value.stack.capacity), capacity + MACHINE_STACK_SIZE));
   }
   st->value.stack.data[st->value.stack.length] = obj;
   st->value.stack.length++;

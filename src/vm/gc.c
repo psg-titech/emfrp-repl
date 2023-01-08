@@ -65,15 +65,18 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
     switch(object_kind(cur)) {
     case EMFRP_OBJECT_TUPLE1:
       CHKERR(push_worklist(self, cur->value.tuple1.i0));
+      CHKERR(push_worklist(self, cur->value.tuple1.tag));
       break;
     case EMFRP_OBJECT_TUPLE2:
       CHKERR(push_worklist(self, cur->value.tuple2.i0));
       CHKERR(push_worklist(self, cur->value.tuple2.i1));
+      CHKERR(push_worklist(self, cur->value.tuple2.tag));
       break;
     //case EMFRP_OBJECT_STACK:
     case EMFRP_OBJECT_TUPLEN:
       for(size_t i = 0; i < cur->value.tupleN.length; ++i)
 	CHKERR(push_worklist(self, object_tuple_ith(cur, i)));
+      CHKERR(push_worklist(self, cur->value.tupleN.tag));
       break;
     case EMFRP_OBJECT_VARIABLE_TABLE: if(cur->value.variable_table.ptr != nullptr) {
       list_t * li;

@@ -63,11 +63,11 @@ typedef struct object_t {
     // ! used on Symbol.
     struct{ string_t value; } symbol;
     // ! used on tuple 1.
-    struct{ struct object_t * i0; } tuple1;
+    struct{ struct object_t * i0; struct object_t * tag; } tuple1;
     // ! used on tuple 2.
-    struct{ struct object_t * i0; struct object_t * i1; } tuple2;
+    struct{ struct object_t * i0; struct object_t * i1; struct object_t * tag; } tuple2;
     // ! used on tuple N.
-    struct{ struct object_t ** data; size_t length; size_t _; } tupleN;
+    struct{ struct object_t ** data; size_t length; struct object_t * tag; } tupleN;
     // ! used on Function.
     struct{
       // ! Closure(kind == EMFRP_OBJECT_VARIABLE_TABLE)
@@ -80,13 +80,13 @@ typedef struct object_t {
 	// ! AST
 	struct parser_expression_t * ast;
 	// ! CallBack
-	exec_callback_t callback;
+	foreign_func_t callbak;
       } function;
     } function;
     // ! used on local variable table.
     struct{ struct variable_table_t * ptr; } variable_table;
     // ! used on local stack.
-    struct{ struct object_t ** data; size_t length; size_t capacity; } stack;
+    struct{ struct object_t ** data; size_t length; struct object_t * capacity; } stack;
   } value;
 } object_t;
 
@@ -177,6 +177,25 @@ static inline int32_t object_get_integer(object_t * v) {
   return (int32_t)(ret >> 2);
 }
 
+
+// ! Get the integer value from the given object.
+/* !
+ * \param v The integer object. Must be tested by object_is_integer.
+ * \param out The result
+ * \return The status
+ */
+static inline int32_t object_get_int(object_t * v, int32_t * o) {
+#if DEBUG
+  if(!object_is_integer(v)) {
+    return EM_RESULT_TYPE_MISMATCH;
+  }
+#endif
+  size_t ret = (size_t)v;
+  *o = (int32_t)(ret >> 2);
+  return EM_RESULT_OK;
+}
+
+
 // ! Freeing the given object.
 /* !
  * \param v The object to be freed.
@@ -185,6 +204,7 @@ static inline void object_free(object_t * v) {
   // if(((size_t)v & 3) == 0 && v != nullptr) em_free(v);
 }
 
+// DESIGN CONSIDERATION IS REQUIRED!
 // ! Construct the new integer object.
 /* !
  * \param out Output object.
@@ -283,7 +303,7 @@ object_new_stack(object_t * out, size_t cap) {
   em_result errres = EM_RESULT_OK;
   out->kind = EMFRP_OBJECT_STACK | (out->kind & 1);
   CHKERR(em_allocarray((void **)(&(out->value.stack.data)), cap, sizeof(object_t *)));
-  out->value.stack.capacity = cap;
+  CHKERR(object_new_int(&(out->value.stack.capacity), cap));
   out->value.stack.length = 0;
  err: return errres;
 }
