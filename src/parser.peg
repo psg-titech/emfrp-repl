@@ -74,7 +74,7 @@ deconstructors <- d:deconstructor (_ ',' _ ds:deconstructors)? { $$ = parser_dec
 empty_or_deconstructors <- ds:deconstructors { $$ = ds; }
                          / _ { $$ = nullptr; }
 
-expression <- 'if' _ con:term _ 'then' _ the:term _ 'else' _ els:term { $$ = parser_expression_new_if(con, the, els); }
+expression <- 'if' _ con:expression _ 'then' _ the:term _ 'else' _ els:expression { $$ = parser_expression_new_if(con, the, els); }
              / t:term { $$ = t; }
 
 term <- l:logical { $$ = l; }
