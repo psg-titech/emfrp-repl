@@ -70,17 +70,26 @@ typedef struct object_t {
     struct{ struct object_t ** data; size_t length; struct object_t * tag; } tupleN;
     // ! used on Function.
     struct{
-      // ! Closure(kind == EMFRP_OBJECT_VARIABLE_TABLE)
-      struct object_t * closure;
       // ! Kind of the function.
       function_program_kind kind;
       union {
 	// ! Nothing
 	nullptr_t nothing;
 	// ! AST
-	struct parser_expression_t * ast;
+	struct {
+	  // ! Closure(kind == EMFRP_OBJECT_VARIABLE_TABLE)
+	  struct object_t * closure; 
+	  struct parser_expression_t * program;
+	}ast;
 	// ! CallBack
-	foreign_func_t callbak;
+	foreign_func_t callback;
+	// ! Record Constructor
+	struct {
+	  // ! Arity(length of tuple.)
+	  size_t arity;
+	  // ! The symbol of tag.
+	  struct object_t * tag;
+	} record;
       } function;
     } function;
     // ! used on local variable table.
@@ -272,9 +281,9 @@ object_new_function_ast(object_t * out, object_t * closure, parser_expression_t 
     return EM_RESULT_INVALID_ARGUMENT;
   }
   out->kind = EMFRP_OBJECT_FUNCTION | (out->kind & 1);
-  out->value.function.closure = closure;
+  out->value.function.function.ast.closure = closure;
   out->value.function.kind = EMFRP_PROGRAM_KIND_AST;
-  out->value.function.function.ast = ast;
+  out->value.function.function.ast.program = ast;
   ast->value.function.reference_count++;
   return EM_RESULT_OK;
 }

@@ -9,6 +9,7 @@
 struct object_t;
 
 typedef struct object_t * (*exec_callback_t)(void);
+typedef em_result (*foreign_func_t)(struct object_t **, struct object_t *);
 #define EXEC_SEQUENCE_PROGRAM_KIND_SHIFT 3
 
 // ! Program kind of node.
@@ -23,5 +24,7 @@ typedef enum emfrp_program_kind {
   // ! containing AST.
   EMFRP_PROGRAM_KIND_AST = 2 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
   // ! containing callback.
-  EMFRP_PROGRAM_KIND_CALLBACK = 3 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
+  EMFRP_PROGRAM_KIND_CALLBACK = 3 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
+  // ! containing record constructor.
+  EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT = 4 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
 } emfrp_program_kind;

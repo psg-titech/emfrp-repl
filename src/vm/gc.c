@@ -92,7 +92,17 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
 	return push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref);
       break;
     }
-    case EMFRP_OBJECT_FUNCTION: return push_worklist(self, cur->value.function.closure);
+    case EMFRP_OBJECT_FUNCTION: {
+      switch(cur->value.function.kind) {
+      case EMFRP_PROGRAM_KIND_AST:
+	return push_worklist(self, cur->value.function.function.ast.closure);
+      case EMFRP_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
+      case EMFRP_PROGRAM_KIND_CALLBACK: return EM_RESULT_OK;
+      case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
+	return push_worklist(self, cur->value.function.function.record.tag);
+      default: DEBUGBREAK; break;
+      }
+    }
     case EMFRP_OBJECT_FREE:
     case EMFRP_OBJECT_STRING:
     case EMFRP_OBJECT_SYMBOL: break;
@@ -119,10 +129,14 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
 	case EMFRP_OBJECT_FUNCTION:
 	  switch(cur->value.function.kind) {
 	  case EMFRP_PROGRAM_KIND_AST:
-	    cur->value.function.function.ast->value.function.reference_count--;
-	    if(cur->value.function.function.ast->value.function.reference_count <= 0)
-	      parser_expression_free(cur->value.function.function.ast);
+	    cur->value.function.function.ast.program->value.function.reference_count--;
+	    if(cur->value.function.function.ast.program->value.function.reference_count <= 0)
+	      parser_expression_free(cur->value.function.function.ast.program);
 	    break;
+	  case EMFRP_PROGRAM_KIND_NOTHING: break;
+	  case EMFRP_PROGRAM_KIND_CALLBACK: break;
+	  case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT: break;
+	  default: DEBUGBREAK; break;
 	  }
 	  break;
 	default: break;

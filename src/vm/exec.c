@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/1
+ * @date   2023/1/9
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -155,6 +155,24 @@ exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) 
 }
 
 em_result
+exec_construct_record(object_t * tag, size_t arity, object_t * args) {
+  if(arity == 0 || args == nullptr) {
+    return EM_RESULT_TYPE_MISMATCH;
+  } if(arity == 1 && object_kind(args) == EMFRP_OBJECT_TUPLE1) {
+    args->value.tuple1.tag = tag;
+    return EM_RESULT_OK;
+  } else if(arity == 2 && object_kind(args) == EMFRP_OBJECT_TUPLE2) {
+    args->value.tuple2.tag = tag;
+    return EM_RESULT_OK;
+  } else if(arity >= 3 && object_kind(args) == EMFRP_OBJECT_TUPLEN
+	    && args->value.tupleN.length) {
+    args->value.tupleN.tag = tag;
+    return EM_RESULT_OK;
+  }
+  return EM_RESULT_INVALID_ARGUMENT;
+}
+
+em_result
 exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   object_t * callee = nullptr;
   object_t * args = nullptr;
@@ -166,31 +184,40 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   if(!object_is_pointer(callee) || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
     return EM_RESULT_TYPE_MISMATCH;
   CHKERR(machine_push(m, callee));
-  if(v->value.funccall.arguments.value == nullptr) { // Arity == 0;
-    if(callee->value.function.function.ast->value.function.arguments != nullptr) {
-      errres = EM_RESULT_INVALID_ARGUMENT;
-      goto err;
-    }
-  } else {
+  if(v->value.funccall.arguments.value != nullptr) {
     CHKERR(exec_tuple(m, &(v->value.funccall.arguments), &args));
     CHKERR(machine_push(m, args));
   }
-  prev_vt = machine_get_variable_table(m);
-  CHKERR(machine_push(m, prev_vt->this_object_ref));
-  if(!object_is_pointer(callee->value.function.closure) || callee->value.function.closure == nullptr) {
-    CHKERR(machine_set_variable_table(m, nullptr));
-  } else if(object_kind(callee->value.function.closure) == EMFRP_OBJECT_VARIABLE_TABLE) {
-    CHKERR(machine_set_variable_table(m, callee->value.function.closure->value.variable_table.ptr));
-  } else {
-    errres = EM_RESULT_INVALID_ARGUMENT;
-    goto err;
-  }
-  CHKERR2(err2, machine_push(m, prev_vt->this_object_ref));
-  CHKERR2(err2, machine_new_variable_table(m));
   switch(callee->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:
-    CHKERR2(err2, machine_assign_variable_tuple(m, callee->value.function.function.ast->value.function.arguments, args));
-    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast->value.function.body, out)); break;
+    if(v->value.funccall.arguments.value == nullptr) { // Arity == 0;
+      if(callee->value.function.function.ast.program->value.function.arguments != nullptr) {
+	errres = EM_RESULT_INVALID_ARGUMENT;
+	goto err;
+      }
+    }
+    prev_vt = machine_get_variable_table(m);
+    CHKERR(machine_push(m, prev_vt->this_object_ref));
+    if(!object_is_pointer(callee->value.function.function.ast.closure)
+       || callee->value.function.function.ast.closure == nullptr) {
+      CHKERR(machine_set_variable_table(m, nullptr));
+    } else if(object_kind(callee->value.function.function.ast.closure) == EMFRP_OBJECT_VARIABLE_TABLE) {
+      CHKERR(machine_set_variable_table(m, callee->value.function.function.ast.closure->value.variable_table.ptr));
+    } else {
+      errres = EM_RESULT_INVALID_ARGUMENT;
+      goto err;
+    }
+    CHKERR2(err2, machine_push(m, prev_vt->this_object_ref));
+    CHKERR2(err2, machine_new_variable_table(m));
+    CHKERR2(err2, machine_assign_variable_tuple(m, callee->value.function.function.ast.program->value.function.arguments, args));
+    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast.program->value.function.body, out));
+    break;
+  case EMFRP_PROGRAM_KIND_NOTHING: break;
+  case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(out, args)); break;
+  case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
+    CHKERR(exec_construct_record(callee->value.function.function.record.tag,
+				 callee->value.function.function.record.arity,
+				 args)); break;
   default: DEBUGBREAK; break;
   }
   CHKERR2(err2, machine_pop_variable_table(m));
