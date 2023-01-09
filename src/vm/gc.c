@@ -99,7 +99,9 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
       case EMFRP_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
       case EMFRP_PROGRAM_KIND_CALLBACK: return EM_RESULT_OK;
       case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
-	return push_worklist(self, cur->value.function.function.record.tag);
+	return push_worklist(self, cur->value.function.function.construct.tag);
+      case EMFRP_PROGRAM_KIND_RECORD_ACCESS:
+	return push_worklist(self, cur->value.function.function.access.tag);
       default: DEBUGBREAK; break;
       }
     }
@@ -136,6 +138,7 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
 	  case EMFRP_PROGRAM_KIND_NOTHING: break;
 	  case EMFRP_PROGRAM_KIND_CALLBACK: break;
 	  case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT: break;
+	  case EMFRP_PROGRAM_KIND_RECORD_ACCESS: break;
 	  default: DEBUGBREAK; break;
 	  }
 	  break;

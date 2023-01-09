@@ -7,6 +7,36 @@
 
 #include "vm/exec.h"
 
+bool
+exec_equal(object_t * l, object_t * r) {
+  bool b = true;
+  if(!object_is_pointer(l) && !object_is_pointer(r))
+    return l == r;
+  if(object_kind(l) != object_kind(r)) return false;
+  switch(object_kind(l)) {
+  case EMFRP_OBJECT_TUPLE1:
+    return exec_equal(l->value.tuple1.tag, r->value.tuple1.tag)
+      && exec_equal(l->value.tuple1.i0, r->value.tuple1.i0);
+  case EMFRP_OBJECT_TUPLE2:
+    return exec_equal(l->value.tuple2.tag, r->value.tuple2.tag)
+      && exec_equal(l->value.tuple2.i0, r->value.tuple2.i0)
+      && exec_equal(l->value.tuple2.i1, r->value.tuple2.i1);
+  case EMFRP_OBJECT_TUPLEN:
+    if(!exec_equal(l->value.tupleN.tag, r->value.tupleN.tag)
+       || l->value.tupleN.length != r->value.tupleN.length) return false;
+    for(int i = 0; i < l->value.tupleN.length; ++i)
+      b &= exec_equal(l->value.tupleN.data[i], r->value.tupleN.data[i]);
+    return b;
+  case EMFRP_OBJECT_SYMBOL:
+  case EMFRP_OBJECT_STRING:
+    return string_compare(&(l->value.symbol.value), &(r->value.symbol.value));
+  case EMFRP_OBJECT_FUNCTION:
+  case EMFRP_OBJECT_VARIABLE_TABLE:
+    return false;
+  default: DEBUGBREAK; return false;
+  }
+}
+
 em_result
 exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t * l, parser_expression_t * r, object_t ** out) {
   object_t * lro = nullptr, * rro = nullptr;
@@ -59,20 +89,10 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
   } else {
     switch(kind) {
     case EXPR_KIND_EQUAL:
-      if(lro->kind != rro->kind) {
-        *out = &object_false;
-        goto ok;
-      }
-      // Add here if you added the new type.
-      *out = &object_true;
+      *out = exec_equal(lro, rro) ? &object_true : &object_false;
       goto ok;
     case EXPR_KIND_NOT_EQUAL:
-      if(lro->kind != rro->kind) {
-        *out = &object_true;
-        goto ok;
-      }
-      // Add here if you added the new type.
-      *out = &object_true;
+      *out = exec_equal(lro, rro) ? &object_false : &object_true;
       goto ok;
     case EXPR_KIND_AND: case EXPR_KIND_DAND: // Code size than performance.
       *out = (lro != &object_false) && (rro != &object_false) ? &object_true : &object_false;
@@ -155,21 +175,54 @@ exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) 
 }
 
 em_result
-exec_construct_record(object_t * tag, size_t arity, object_t * args) {
-  if(arity == 0 || args == nullptr) {
-    return EM_RESULT_TYPE_MISMATCH;
+exec_construct_record(object_t * tag, size_t arity, object_t * args, object_t ** out) {
+  if(arity == 0 && args == nullptr) {
+    *out = tag;
+    return EM_RESULT_OK;
   } if(arity == 1 && object_kind(args) == EMFRP_OBJECT_TUPLE1) {
     args->value.tuple1.tag = tag;
+    *out = args;
     return EM_RESULT_OK;
   } else if(arity == 2 && object_kind(args) == EMFRP_OBJECT_TUPLE2) {
     args->value.tuple2.tag = tag;
+    *out = args;
     return EM_RESULT_OK;
   } else if(arity >= 3 && object_kind(args) == EMFRP_OBJECT_TUPLEN
 	    && args->value.tupleN.length) {
     args->value.tupleN.tag = tag;
+    *out = args;
     return EM_RESULT_OK;
   }
   return EM_RESULT_INVALID_ARGUMENT;
+}
+
+em_result
+exec_access_record(object_t * tag, size_t index, object_t * args, object_t ** out) {
+  if(object_kind(args) != EMFRP_OBJECT_TUPLE1)
+    return EM_RESULT_INVALID_ARGUMENT;
+  object_t * t = args->value.tuple1.i0;
+  switch(object_kind(t))  {
+  case EMFRP_OBJECT_TUPLE1:
+    if(!exec_equal(t->value.tuple1.tag, tag))
+      return EM_RESULT_TYPE_MISMATCH;
+    if(index >= 1) return EM_RESULT_TYPE_MISMATCH;
+    *out = t->value.tuple1.i0;
+    return EM_RESULT_OK;
+  case EMFRP_OBJECT_TUPLE2:
+    if(!exec_equal(t->value.tuple2.tag, tag))
+      return EM_RESULT_TYPE_MISMATCH;
+    if(index >= 2) return EM_RESULT_TYPE_MISMATCH;
+    *out = index == 0 ? t->value.tuple2.i0 : t->value.tuple2.i1;
+    return EM_RESULT_OK;
+  case EMFRP_OBJECT_TUPLEN:
+    if(!exec_equal(t->value.tupleN.tag, tag))
+      return EM_RESULT_TYPE_MISMATCH;
+    if(index >= t->value.tupleN.length) return EM_RESULT_TYPE_MISMATCH;
+    *out = t->value.tupleN.data[index];
+    return EM_RESULT_OK;
+  default:
+    return EM_RESULT_TYPE_MISMATCH;
+  }
 }
 
 em_result
@@ -215,9 +268,13 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   case EMFRP_PROGRAM_KIND_NOTHING: break;
   case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(out, args)); break;
   case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
-    CHKERR(exec_construct_record(callee->value.function.function.record.tag,
-				 callee->value.function.function.record.arity,
-				 args)); break;
+    CHKERR(exec_construct_record(callee->value.function.function.construct.tag,
+				 callee->value.function.function.construct.arity,
+				 args, out)); break;
+  case EMFRP_PROGRAM_KIND_RECORD_ACCESS:
+    CHKERR(exec_access_record(callee->value.function.function.access.tag,
+			      callee->value.function.function.access.index,
+			      args, out)); break;
   default: DEBUGBREAK; break;
   }
   CHKERR2(err2, machine_pop_variable_table(m));

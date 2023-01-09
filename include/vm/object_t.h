@@ -89,7 +89,14 @@ typedef struct object_t {
 	  size_t arity;
 	  // ! The symbol of tag.
 	  struct object_t * tag;
-	} record;
+	} construct;
+	// ! Record Accessor
+	struct {
+	  // ! Index(nth element).
+	  size_t index;
+	  // ! The symbol of tag.
+	  struct object_t * tag;
+	} access;
       } function;
     } function;
     // ! used on local variable table.

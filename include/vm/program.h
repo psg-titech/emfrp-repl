@@ -26,5 +26,7 @@ typedef enum emfrp_program_kind {
   // ! containing callback.
   EMFRP_PROGRAM_KIND_CALLBACK = 3 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
   // ! containing record constructor.
-  EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT = 4 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
+  EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT = 4 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT,
+  // ! containing record accessor.
+  EMFRP_PROGRAM_KIND_RECORD_ACCESS = 5 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
 } emfrp_program_kind;
