@@ -190,7 +190,7 @@ machine_assign_variable(machine_t * self, string_t * name, struct object_t * val
  * \param v The tuple object
  * \return The result
  */
-em_result machine_assign_variable_tuple(machine_t * self, list_t /*<string_or_tuple_t>*/ * nt, struct object_t * v);
+em_result machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
 
 // ! Lookup a value of the variable.
 /* !

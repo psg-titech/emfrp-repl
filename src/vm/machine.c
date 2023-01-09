@@ -45,10 +45,15 @@ machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
     parser_data_t * d = prog->value.data;
     object_t * o = nullptr;
     CHKERR(exec_ast(self, d->expression, &o));
-    if(d->name.isString) {
-      CHKERR(machine_assign_variable(self, d->name.value.string, o));
-    } else
-      CHKERR(machine_assign_variable_tuple(self, d->name.value.tuple, o));
+    switch(d->name.kind) {
+    case DECONSTRUCTOR_IDENTIFIER:
+      CHKERR(machine_assign_variable(self, d->name.value.identifier, o));
+      break;
+    case DECONSTRUCTOR_TUPLE:
+      CHKERR(machine_assign_variable_tuple(self, d->name.value.tuple.tag, d->name.value.tuple.data, o));
+      break;
+    default: DEBUGBREAK; break;
+    }
     break;
   }
   case PARSER_TOPLEVEL_KIND_FUNC: {
@@ -136,9 +141,8 @@ machine_pop(machine_t * self, object_t ** obj) {
  err: return errres;
 }
 
-
 em_result
-machine_assign_variable_tuple(machine_t * self, list_t /*<string_or_tuple_t>*/ * nt, object_t * v) {
+machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, object_t * v) {
   em_result errres;
   int len = 0;
   for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
@@ -149,26 +153,54 @@ machine_assign_variable_tuple(machine_t * self, list_t /*<string_or_tuple_t>*/ *
   }
   object_t ** obj;
   switch(object_kind(v)) {
+  case EMFRP_OBJECT_SYMBOL:
+    if(len != 0) return EM_RESULT_INVALID_ARGUMENT;
+    if(tag == nullptr) return EM_RESULT_INVALID_ARGUMENT;
+    return string_compare(tag, &(v->value.symbol.value)) ? EM_RESULT_OK : EM_RESULT_INVALID_ARGUMENT;
   case EMFRP_OBJECT_TUPLE1:
     if(len != 1) return EM_RESULT_INVALID_ARGUMENT;
+    if(tag != nullptr &&
+      (!object_is_pointer(v->value.tuple1.tag)
+       || v->value.tuple1.tag == nullptr
+       || object_kind(v->value.tuple1.tag) != EMFRP_OBJECT_SYMBOL
+       || !string_compare(tag, &(v->value.tuple1.tag->value.symbol.value))))
+      return EM_RESULT_INVALID_ARGUMENT;
     obj = &(v->value.tuple1.i0);
     break;
   case EMFRP_OBJECT_TUPLE2:
     if(len != 2) return EM_RESULT_INVALID_ARGUMENT;
+    if(tag != nullptr &&
+      (!object_is_pointer(v->value.tuple2.tag)
+       || v->value.tuple2.tag == nullptr
+       || object_kind(v->value.tuple2.tag) != EMFRP_OBJECT_SYMBOL
+       || !string_compare(tag, &(v->value.tuple2.tag->value.symbol.value))))
+      return EM_RESULT_INVALID_ARGUMENT;
     obj = &(v->value.tuple2.i0);
     break;
   case EMFRP_OBJECT_TUPLEN:
     if(len != v->value.tupleN.length) return EM_RESULT_INVALID_ARGUMENT;
+    if(tag != nullptr &&
+      (!object_is_pointer(v->value.tupleN.tag)
+       || v->value.tupleN.tag == nullptr
+       || object_kind(v->value.tupleN.tag) != EMFRP_OBJECT_SYMBOL
+       || !string_compare(tag, &(v->value.tupleN.tag->value.symbol.value))))
+      return EM_RESULT_INVALID_ARGUMENT;
     obj = v->value.tupleN.data;
     break;
   }
   int i = 0;
   for(list_t * l = nt; l != nullptr; l = LIST_NEXT(l), i++) {
-    string_or_tuple_t * st = (string_or_tuple_t *)&(l->value);
-    if(st->isString)
-      return machine_assign_variable(self, st->value.string, obj[i]);
-    else
-      CHKERR(machine_assign_variable_tuple(self, st->value.tuple, obj[i]));
+    deconstructor_t * dt = (deconstructor_t *)&(l->value);
+    switch(dt->kind) {
+    case DECONSTRUCTOR_IDENTIFIER: CHKERR(machine_assign_variable(self, dt->value.identifier, obj[i])); break;
+    case DECONSTRUCTOR_TUPLE: CHKERR(machine_assign_variable_tuple(self, dt->value.tuple.tag, dt->value.tuple.data, obj[i]));  break;
+    case DECONSTRUCTOR_INTEGER:
+      if(!object_is_integer(obj[i]) || dt->value.integer != object_get_integer(obj[i])) return EM_RESULT_INVALID_ARGUMENT;
+#if EMFRP_ENABLE_FLOATING
+    case DECONSTRUCTOR_FLOATING:
+#endif
+    default: DEBUGBREAK; continue;
+    }
   }
  err:
   return errres;
@@ -257,16 +289,19 @@ bool has_cyclicreference(string_t * newnode_str, list_t * executionlist_head, li
   return false;
 }
 
-bool has_cyclicreference2(string_or_tuple_t * newnode_str, list_t * executionlist_head, list_t * cur) {
-  if(newnode_str->isString)
-    return has_cyclicreference(newnode_str->value.string, executionlist_head, cur);
-  else {
+bool has_cyclicreference2(deconstructor_t * newnode_str, list_t * executionlist_head, list_t * cur) {
+  switch(newnode_str->kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    return has_cyclicreference(newnode_str->value.identifier, executionlist_head, cur);
+  case DECONSTRUCTOR_TUPLE: {
     bool ret = false;
-    for(list_t * li = newnode_str->value.tuple; li != nullptr; li = LIST_NEXT(li)) {
-      string_or_tuple_t * st = (string_or_tuple_t *)(&(li->value));
-      ret |= has_cyclicreference2(st, executionlist_head, cur);
+    for(list_t * li = newnode_str->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) {
+      deconstructor_t * dt = (deconstructor_t *)(&(li->value));
+      ret |= has_cyclicreference2(dt, executionlist_head, cur);
     }
     return ret;
+  }
+  default: DEBUGBREAK; return false;
   }
 }
 
@@ -312,35 +347,45 @@ machine_remove_previous_definition2(machine_t * self, journal_t ** out, string_t
 }
 
 em_result
-machine_remove_previous_definition(machine_t * self, journal_t ** out, string_or_tuple_t * st) {
+machine_remove_previous_definition(machine_t * self, journal_t ** out, deconstructor_t * dt) {
   em_result errres = EM_RESULT_OK;
-  if(st->isString)
-    return machine_remove_previous_definition2(self, out, st->value.string);
-  for(list_t * li = st->value.tuple; li != nullptr; li = LIST_NEXT(li)) {
-    string_or_tuple_t * s = (string_or_tuple_t *)(&(li->value));
-    CHKERR(machine_remove_previous_definition(self, out, s));
+  switch(dt->kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    return machine_remove_previous_definition2(self, out, dt->value.identifier);
+  case DECONSTRUCTOR_TUPLE:
+  for(list_t * li = dt->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) {
+    deconstructor_t * d = (deconstructor_t *)(&(li->value));
+    CHKERR(machine_remove_previous_definition(self, out, d));
+  }
+  break;
   }
  err:
   return errres;
 }
 
 em_result
-machine_add_nodes(machine_t * self, string_or_tuple_t * st, node_or_tuple_t * node_ptr) {
+machine_add_nodes(machine_t * self, deconstructor_t * dt, node_or_tuple_t * node_ptr) {
   em_result errres = EM_RESULT_OK;
-  if(st->isString) { // string -> node
+  switch(dt->kind) {
+  case DECONSTRUCTOR_IDENTIFIER: { // string -> node
     node_t * n = nullptr;
-    CHKERR(machine_add_node(self, *(st->value.string), &(node_ptr->value.node)));
+    CHKERR(machine_add_node(self, *(dt->value.identifier), &(node_ptr->value.node)));
     node_ptr->kind = NODE_OR_TUPLE_NODE;
-  } else { // list -> array
+    break;
+  }
+  case DECONSTRUCTOR_TUPLE: { // list -> array
     int cnt = 0;
     list_t * li;
-    for(li = st->value.tuple; li != nullptr; li = LIST_NEXT(li)) cnt++;
+    for(li = dt->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) cnt++;
     node_ptr->kind = NODE_OR_TUPLE_TUPLE;
     CHKERR(arraylist_new(&(node_ptr->value.tuple), sizeof(node_or_tuple_t), cnt));
-    li = st->value.tuple;
+    li = dt->value.tuple.data;
     for(int i = 0; i < cnt; ++i, li = LIST_NEXT(li)) {
-      CHKERR(machine_add_nodes(self, (string_or_tuple_t *)(&(li->value)), &(((node_or_tuple_t *)(node_ptr->value.tuple.buffer))[i])));
+      CHKERR(machine_add_nodes(self, (deconstructor_t *)(&(li->value)), &(((node_or_tuple_t *)(node_ptr->value.tuple.buffer))[i])));
     }
+    break;
+  }
+  default: DEBUGBREAK; break;
   }
  err:
   return errres;
@@ -370,14 +415,18 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
   if(LIST_IS_EMPTY(&((*whereto_insert)->next)))
     self->execution_list.last = &((*whereto_insert)->next);
   if(out != nullptr) *out = new_entry;
-  if(n->name.isString) { // Single name.
-    CHKERR2(err2, machine_add_node(self, *(n->name.value.string), &(new_entry->node_definition)));
-  } else {
+  switch(n->name.kind) {
+  case DECONSTRUCTOR_IDENTIFIER: { // Single name.
+    CHKERR2(err2, machine_add_node(self, *(n->name.value.identifier), &(new_entry->node_definition)));
+    break;
+  }
+  case DECONSTRUCTOR_TUPLE: {
     CHKERR2(err2, em_malloc((void**)(&(new_entry->node_definitions)), sizeof(node_or_tuple_t)));
     CHKERR2(err2, machine_add_nodes(self, &(n->name), new_entry->node_definitions));
     if(n->as != nullptr) {
       CHKERR2(err2, machine_add_node(self, *(n->as), &(new_entry->node_definition)));
     }
+  }
   }
   if(journal != nullptr) {
     machine_cleanup(&(self->execution_list));

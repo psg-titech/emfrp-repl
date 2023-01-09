@@ -96,13 +96,41 @@ typedef enum parser_expression_kind_t : int32_t {
 #define parser_expression_true() (parser_expression_t *)0x2;
 #define parser_expression_false() (parser_expression_t *)0x6;
 
-typedef struct string_or_tuple_t {
-  bool isString;
+// ! Kind of deconstructor
+typedef enum deconstructor_kind {
+  // ! Identifier
+  DECONSTRUCTOR_IDENTIFIER,
+  // ! Tuple
+  DECONSTRUCTOR_TUPLE,
+  // ! Integer
+  DECONSTRUCTOR_INTEGER
+#if EMFRP_ENABLE_FLOATING
+  // ! Floating
+  ,DECONSTRUCTOR_FLOAT
+#endif
+} deconstructor_kind;
+
+// ! Deconstructor Expression
+typedef struct deconstructor_t {
+  deconstructor_kind kind;
   union {
-    string_t * string;
-    list_t /*<string_or_tuple_t>*/ * tuple;
+    // ! Identifier
+    string_t * identifier;
+    // ! Tuple
+    struct {
+      // ! Tag(when tuple, tag is nullptr)
+      string_t * tag;
+      // ! Tuple
+      list_t /*<deconstructor_t>*/ * data;
+    } tuple;
+    // ! Integer
+    int32_t integer;
+#if EMFRP_ENABLE_FLOATING
+    // ! Floating number.
+    float floating;
+#endif
   } value;
-} string_or_tuple_t;
+} deconstructor_t;
 
 // ! Expression.(except for node definition.)
 typedef struct parser_expression_t {
@@ -158,7 +186,7 @@ typedef struct parser_expression_t {
 // ! Node Definition.
 typedef struct parser_node_t {
   // ! Name of node.
-  string_or_tuple_t name;
+  deconstructor_t name;
   // ! Expression of node.
   parser_expression_t * expression;
   // ! `init` Expression
@@ -172,14 +200,14 @@ typedef struct parser_func_t {
   // ! The name.
   string_t * name;
   // ! The arguments.
-  list_t /*<string_or_tuple_t>*/ * arguments;
+  list_t /*<deconstructor_t>*/ * arguments;
   // ! The body.
   parser_expression_t * expression;
 } parser_func_t;
 
 typedef struct parser_data_t {
   // ! The name.
-  string_or_tuple_t name;
+  deconstructor_t name;
   // ! The body.
   parser_expression_t * expression;
 } parser_data_t;
@@ -318,7 +346,7 @@ void parser_toplevel_free_deep(parser_toplevel_t * pt);
  * \return Malloc-ed and constructed parser_func_t
  */
 static inline parser_func_t *
-parser_func_new(string_t * name, list_t /*<string_or_tuple_t>*/ * dec, parser_expression_t * e) {
+parser_func_new(string_t * name, list_t /*<deconstructor_t>*/ * dec, parser_expression_t * e) {
   parser_func_t * ret = nullptr;
   if(em_malloc((void **)&ret, sizeof(parser_func_t)))
     return nullptr;
@@ -351,7 +379,7 @@ void parser_func_free_deep(parser_func_t * pf);
  * \return Malloc-ed and constructed parser_data_t
  */
 static inline parser_data_t *
-parser_data_new(string_or_tuple_t * dec, parser_expression_t * e) {
+parser_data_new(deconstructor_t * dec, parser_expression_t * e) {
   parser_data_t * ret = nullptr;
   if(em_malloc((void **)&ret, sizeof(parser_data_t)))
     return nullptr;
@@ -401,7 +429,7 @@ void parser_record_free_deep(parser_record_t * pr);
  * \return Malloc-ed and constructed parser_node_t
  */
 static inline parser_node_t *
-parser_node_new(string_or_tuple_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression, string_t * node_as) {
+parser_node_new(deconstructor_t * node_name, parser_expression_t * expression, parser_expression_t * init_expression, string_t * node_as) {
   parser_node_t * ret = nullptr;
   if(em_malloc((void **)&ret, sizeof(parser_node_t)))
     return nullptr;
@@ -430,31 +458,33 @@ void parser_node_free_shallow(parser_node_t * pn);
 void parser_node_free_deep(parser_node_t * pn);
 
 
-static inline string_or_tuple_t *
-parser_deconstructor_new(string_t * str) {
-  string_or_tuple_t * v;
-  if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
+static inline deconstructor_t *
+parser_deconstructor_new_identifier(string_t * str) {
+  deconstructor_t * v;
+  if(em_malloc((void **)&v, sizeof(deconstructor_t)))
     return nullptr;
-  v->isString = true;
-  v->value.string = str;
+  v->kind = DECONSTRUCTOR_IDENTIFIER;
+  v->value.identifier = str;
   return v;
 }
 
-static inline string_or_tuple_t *
-parser_deconstructors_new(list_t * li) {
-  string_or_tuple_t * v;
-  if(em_malloc((void **)&v, sizeof(string_or_tuple_t)))
+static inline deconstructor_t *
+parser_deconstructor_new_tuple(string_t * tag, list_t /*<deconstructor_t>*/ * li) {
+  deconstructor_t * v;
+  if(em_malloc((void **)&v, sizeof(deconstructor_t)))
     return nullptr;
-  v->isString = false;
-  v->value.tuple = li;
+  v->kind = DECONSTRUCTOR_TUPLE;
+  v->value.tuple.tag = tag;
+  v->value.tuple.data = li;
   return v;
 }
 
-static inline list_t /*<string_or_tuple_t>*/ *
-parser_deconstructors_prepend(string_or_tuple_t * head,
-			    list_t /*<string_or_tuple_t>*/ * tail) {
-  if(list_add2(&tail, string_or_tuple_t, head))
+static inline list_t /*<deconstructor_t>*/ *
+parser_deconstructors_prepend(deconstructor_t * head,
+			    list_t /*<deconstructor_t>*/ * tail) {
+  if(list_add2(&tail, deconstructor_t, head))
     return nullptr;
+  em_free(head);
   return tail;
 }
 
@@ -602,7 +632,7 @@ parser_expression_tuple_prepend(parser_expression_t * self, parser_expression_t 
  * \return The result
  */
 static inline parser_expression_t *
-parser_expression_new_function(list_t /*<string_or_tuple_t>*/ * deconstructors, parser_expression_t * body) { 
+parser_expression_new_function(list_t /*<deconstructor_t>*/ * deconstructors, parser_expression_t * body) { 
   parser_expression_t * ret = nullptr;
   if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
     return nullptr;

@@ -15,27 +15,47 @@ const char * const binary_op_table[] = {
 };
 
 void
-string_or_tuple_free_shallow(string_or_tuple_t * st) {
-  if(!(st->isString))
-    for(list_t * li = st->value.tuple; li != nullptr; ) {
-      string_or_tuple_free_shallow((string_or_tuple_t*)(&(li->value)));
+deconstructor_free_shallow(deconstructor_t * st) {
+  switch(st->kind) {
+  case DECONSTRUCTOR_IDENTIFIER: break;
+  case DECONSTRUCTOR_TUPLE:
+    if(st->value.tuple.tag != nullptr) { // ILLEGAL STATE
+      DEBUGBREAK;
+      string_free(st->value.tuple.tag);
+      em_free(st->value.tuple.tag);
+    }
+    for(list_t * li = st->value.tuple.data; li != nullptr; ) {
+      deconstructor_free_shallow((deconstructor_t*)(&(li->value)));
       list_t * ne = LIST_NEXT(li);
       free(li);
       li = ne;
     }
+    break;
+  default: break;
+  }
 }
 
 void
-string_or_tuple_free_deep(string_or_tuple_t * st) {
-  if(st->isString)
-    string_free(st->value.string);
-  else
-    for(list_t * li = st->value.tuple; li != nullptr; ) {
-      string_or_tuple_free_deep((string_or_tuple_t*)(&(li->value)));
+deconstructor_free_deep(deconstructor_t * st) {
+  switch(st->kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    string_free(st->value.identifier);
+    em_free(st->value.identifier);
+    break;
+  case DECONSTRUCTOR_TUPLE:
+    if(st->value.tuple.tag != nullptr) {
+      string_free(st->value.tuple.tag);
+      em_free(st->value.tuple.tag);
+    }
+    for(list_t * li = st->value.tuple.data; li != nullptr; ) {
+      deconstructor_free_deep((deconstructor_t*)(&(li->value)));
       list_t * ne = LIST_NEXT(li);
       free(li);
       li = ne;
     }
+    break;
+  default: break;
+  }
 }
 
 void
@@ -73,8 +93,8 @@ parser_func_free_deep(parser_func_t * pf) {
   string_free(pf->name);
   em_free(pf->name);
   if(pf->arguments != nullptr) {
-      string_or_tuple_t st = {false, .value.tuple = pf->arguments};
-      string_or_tuple_free_deep(&st);
+    deconstructor_t dt = {DECONSTRUCTOR_TUPLE, .value.tuple.tag = nullptr, .value.tuple.data = pf->arguments};
+    deconstructor_free_deep(&dt);
   }
   parser_expression_free(pf->expression);
   em_free(pf);
@@ -82,7 +102,7 @@ parser_func_free_deep(parser_func_t * pf) {
 
 void
 parser_data_free_deep(parser_data_t * pd) {
-  string_or_tuple_free_deep(&(pd->name));
+  deconstructor_free_deep(&(pd->name));
   parser_expression_free(pd->expression);
   em_free(pd);
 }
@@ -103,14 +123,14 @@ parser_record_free_deep(parser_record_t * pr) {
 
 void
 parser_node_free_shallow(parser_node_t * pn) {
-  string_or_tuple_free_shallow(&(pn->name));
+  deconstructor_free_shallow(&(pn->name));
   parser_expression_free(pn->init_expression);
   em_free(pn);
 }
 
 void
 parser_node_free_deep(parser_node_t * pn) {
-  string_or_tuple_free_deep(&(pn->name));
+  deconstructor_free_deep(&(pn->name));
   if(pn->as != nullptr) {
     string_free(pn->as);
     em_free(pn->as);
@@ -121,22 +141,50 @@ parser_node_free_deep(parser_node_t * pn) {
 }
 
 void
-go_node_name_print(list_t * li) {
+go_deconstructor_print(list_t /*<deconstructor_t>*/ * li) {
   if(li == nullptr) return;
   printf("(");
-  string_or_tuple_t * st = (string_or_tuple_t *)(&(li->value));
-  if(st->isString)
-    printf("%s", st->value.string->buffer);
-  else
-    go_node_name_print(st->value.tuple);
-  
+  deconstructor_t * dt = (deconstructor_t *)(&(li->value));
+  switch(dt->kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    printf("%s", dt->value.identifier->buffer);
+    break;
+  case DECONSTRUCTOR_TUPLE:
+    if(dt->value.tuple.tag != nullptr)
+      printf("%s ", dt->value.tuple.tag->buffer);
+    go_deconstructor_print(dt->value.tuple.data);
+    break;
+  case DECONSTRUCTOR_INTEGER:
+    printf("%d", dt->value.integer);
+    break;
+#if EMFRP_ENABLE_FLOATING
+  case DECONSTRUCTOR_FLOATING:
+    printf("%lf", dt->value.floating);
+    break;
+#endif
+  }
   for(li = LIST_NEXT(li); li != nullptr; li = LIST_NEXT(li)) {
     printf(", ");
-    st = (string_or_tuple_t *)(&(li->value));
-    if(st->isString)
-      printf("%s", st->value.string->buffer);
-    else
-      go_node_name_print(st->value.tuple);
+    dt = (deconstructor_t *)(&(li->value));
+    
+    switch(dt->kind) {
+    case DECONSTRUCTOR_IDENTIFIER:
+      printf("%s", dt->value.identifier->buffer);
+      break;
+    case DECONSTRUCTOR_TUPLE:
+      if(dt->value.tuple.tag != nullptr)
+	printf("%s ", dt->value.tuple.tag->buffer);
+      go_deconstructor_print(dt->value.tuple.data);
+    break;
+    case DECONSTRUCTOR_INTEGER:
+      printf("%d", dt->value.integer);
+      break;
+#if EMFRP_ENABLE_FLOATING
+    case DECONSTRUCTOR_FLOATING:
+      printf("%lf", dt->value.floating);
+      break;
+#endif
+    }
   }
   printf(")");
 }
@@ -155,14 +203,16 @@ parser_toplevel_print(parser_toplevel_t * t) {
 
 void
 parser_node_print(parser_node_t * n) {
-  if(n->name.isString) {
-    printf("node %s = ", n->name.value.string->buffer);
-  } else {
-    printf("node ");
-    go_node_name_print(n->name.value.tuple);
-    if(n->as != nullptr)
-      printf(" as %s", n->as->buffer);
+  switch(n->name.kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    printf("data %s = ", n->name.value.identifier->buffer);
+    break;
+  case DECONSTRUCTOR_TUPLE:
+    printf("data ");
+    go_deconstructor_print(n->name.value.tuple.data);
     printf(" = ");
+    break;
+  default: DEBUGBREAK; break;
   }
   parser_expression_print(n->expression);
   printf("\n");
@@ -170,12 +220,16 @@ parser_node_print(parser_node_t * n) {
 
 void
 parser_data_print(parser_data_t * d) {
-  if(d->name.isString)
-    printf("data %s = ", d->name.value.string->buffer);
-  else {
+  switch(d->name.kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+    printf("data %s = ", d->name.value.identifier->buffer);
+    break;
+  case DECONSTRUCTOR_TUPLE:
     printf("data ");
-    go_node_name_print(d->name.value.tuple);
+    go_deconstructor_print(d->name.value.tuple.data);
     printf(" = ");
+    break;
+  default: DEBUGBREAK; break;
   }
   parser_expression_print(d->expression);
 }
@@ -183,7 +237,7 @@ parser_data_print(parser_data_t * d) {
 void
 parser_function_print(parser_func_t * f) {
   printf("func %s", f->name->buffer);
-  go_node_name_print(f->arguments);
+  go_deconstructor_print(f->arguments);
   printf(" = ");
   parser_expression_print(f->expression);
 }
@@ -260,7 +314,7 @@ parser_expression_print(parser_expression_t * e) {
       break;
     case EXPR_KIND_FUNCTION: {
       printf("(fun");
-      go_node_name_print(e->value.function.arguments);
+      go_deconstructor_print(e->value.function.arguments);
       printf(" -> (");
       parser_expression_print(e->value.function.body);
       printf("))");
@@ -314,12 +368,12 @@ parser_expression_free(parser_expression_t * expr) {
       break;
     }
     case EXPR_KIND_FUNCTION: {
-      string_or_tuple_t st = {false, .value.tuple = expr->value.function.arguments};
+      deconstructor_t dt = {DECONSTRUCTOR_TUPLE, .value.tuple.tag = nullptr, .value.tuple.data = expr->value.function.arguments};
       expr->value.function.reference_count--;
       if(expr->value.function.reference_count > 0) return;
       parser_expression_free(expr->value.function.body);
       
-      string_or_tuple_free_deep(&st);
+      deconstructor_free_deep(&dt);
       em_free(expr->value.function.arguments);
       break;
     }
