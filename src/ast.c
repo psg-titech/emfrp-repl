@@ -303,6 +303,7 @@ parser_expression_free(parser_expression_t * expr) {
     }
     case EXPR_KIND_FUNCCALL: {
       parser_expression_tuple_list_t * tl = &expr->value.funccall.arguments;
+      tl = tl->next;
       while(tl != nullptr) {
         parser_expression_tuple_list_t * v = tl->next;
         parser_expression_free(tl->value);
