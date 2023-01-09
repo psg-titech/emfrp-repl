@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/31
+ * @date   2023/1/9
  ------------------------------------------- */
 
 #pragma once
@@ -184,6 +184,13 @@ typedef struct parser_data_t {
   parser_expression_t * expression;
 } parser_data_t;
 
+typedef struct parser_record_t {
+  // ! The name.
+  string_t name;
+  // ! Accessors list.
+  list_t /*<string_t>*/ * accessors;
+} parser_record_t;
+
 // ! Toplevel kind(parser_toplevel_t::kind)
 typedef enum parser_toplevel_kind {
   // ! parser_toplevel_t::value is parser_node_t.
@@ -193,7 +200,9 @@ typedef enum parser_toplevel_kind {
   // ! parser_toplevel_t::value is parser_data_t.
   PARSER_TOPLEVEL_KIND_DATA,
   // ! parser_toplevel_t::value is parser_expression_t.
-  PARSER_TOPLEVEL_KIND_EXPR
+  PARSER_TOPLEVEL_KIND_EXPR,
+  // ! parser_toplevel_t::value is parser_record_t.
+  PARSER_TOPLEVEL_KIND_RECORD
 } parser_toplevel_kind;
 
 // ! Toplevel Expression.
@@ -206,6 +215,7 @@ typedef struct parser_toplevel_t {
     parser_func_t * func;
     parser_data_t * data;
     parser_expression_t * expression;
+    parser_record_t * record;
   } value;
 } parser_toplevel_t;
 
@@ -266,6 +276,21 @@ parser_toplevel_new_expr(parser_expression_t * e) {
     return nullptr;
   ret->kind = PARSER_TOPLEVEL_KIND_EXPR;
   ret->value.expression = e;
+  return ret;
+}
+
+// ! Constructor of parser_toplevel_t(record)
+/* !
+ * \param r The record.
+ * \return Malloc-ed and constructed parser_toplevel_t
+ */
+static inline parser_toplevel_t *
+parser_toplevel_new_record(parser_record_t * r) {
+  parser_toplevel_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_toplevel_t)))
+    return nullptr;
+  ret->kind = PARSER_TOPLEVEL_KIND_RECORD;
+  ret->value.record = r;
   return ret;
 }
 
@@ -344,6 +369,30 @@ parser_data_new(string_or_tuple_t * dec, parser_expression_t * e) {
  */
 void parser_data_free_deep(parser_data_t * pd);
 
+// ! Constructor of parser_record_t.
+/* !
+ * \param name The name.
+ * \param accessors The accessors list.
+ * \return Malloc-ed and constructed parser_record_t
+ */
+static inline parser_record_t *
+parser_record_new(string_t * name, list_t /*<string_t> */ * accessors) {
+  parser_record_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_record_t)))
+    return nullptr;
+  ret->name = *name;
+  em_free(name);
+  ret->accessors = accessors;
+  return ret;
+}
+
+// ! Deep free for parser_record_t.
+/* !
+ * This is used when adding a record failed.
+ * \param pr To be freed.
+ */
+void parser_record_free_deep(parser_record_t * pr);
+
 // ! Constructor of parser_node_t.
 /* !
  * \param node_name Name of node. Not copied.
@@ -406,6 +455,14 @@ parser_deconstructors_prepend(string_or_tuple_t * head,
 			    list_t /*<string_or_tuple_t>*/ * tail) {
   if(list_add2(&tail, string_or_tuple_t, head))
     return nullptr;
+  return tail;
+}
+
+static inline list_t /*<string_t> */ *
+parser_identifiers_prepend(string_t * str,
+			   list_t /*<string_t>*/ * tail) {
+  if(list_add2(&tail, string_t, str)) return nullptr;
+  em_free(str);
   return tail;
 }
 
@@ -611,6 +668,12 @@ void parser_node_print(parser_node_t * n);
  */
 void parser_data_print(parser_data_t * d);
 
+// ! Print parser_record_t to stdout.
+/* !
+ * \param r The record definition to be printed.
+ */
+void parser_record_print(parser_record_t * r);
+
 // ! Print parser_func_t to stdout.
 /* !
  * \param f The function definition to be printed.
@@ -622,3 +685,4 @@ void parser_function_print(parser_func_t * f);
  * \param n The expression to be printed.
  */
 void parser_expression_print(parser_expression_t * e);
+

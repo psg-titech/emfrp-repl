@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/31
+ * @date   2023/1/9
  ------------------------------------------- */
 
 #include "ast.h"
@@ -45,6 +45,7 @@ parser_toplevel_free_shallow(parser_toplevel_t * pt) {
   case PARSER_TOPLEVEL_KIND_DATA: parser_data_free_deep(pt->value.data); break;
   case PARSER_TOPLEVEL_KIND_FUNC: parser_func_free_shallow(pt->value.func); break;
   case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_free(pt->value.expression); break;
+  case PARSER_TOPLEVEL_KIND_RECORD: parser_record_free_deep(pt->value.record); break;
   }
   em_free(pt);
 }
@@ -56,6 +57,7 @@ parser_toplevel_free_deep(parser_toplevel_t * pt) {
   case PARSER_TOPLEVEL_KIND_DATA: parser_data_free_deep(pt->value.data); break;
   case PARSER_TOPLEVEL_KIND_FUNC: parser_func_free_deep(pt->value.func); break;
   case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_free(pt->value.expression); break;
+  case PARSER_TOPLEVEL_KIND_RECORD: parser_record_free_deep(pt->value.record); break;
   }
   em_free(pt);
 }
@@ -69,6 +71,7 @@ parser_func_free_shallow(parser_func_t * pf) {
 void
 parser_func_free_deep(parser_func_t * pf) {
   string_free(pf->name);
+  em_free(pf->name);
   if(pf->arguments != nullptr) {
       string_or_tuple_t st = {false, .value.tuple = pf->arguments};
       string_or_tuple_free_deep(&st);
@@ -82,6 +85,20 @@ parser_data_free_deep(parser_data_t * pd) {
   string_or_tuple_free_deep(&(pd->name));
   parser_expression_free(pd->expression);
   em_free(pd);
+}
+
+void
+parser_record_free_deep(parser_record_t * pr) {
+  string_free(&(pr->name));
+  list_t /*<string_t>*/ * li = pr->accessors;
+  while(li != nullptr) {
+    list_t * ne = LIST_NEXT(li);
+    string_t * v = (string_t *)(&(li->value));
+    string_free(v);
+    em_free(li);
+    li = ne;
+  }
+  em_free(pr);
 }
 
 void
@@ -131,6 +148,7 @@ parser_toplevel_print(parser_toplevel_t * t) {
   case PARSER_TOPLEVEL_KIND_DATA: parser_data_print(t->value.data); break;
   case PARSER_TOPLEVEL_KIND_FUNC: parser_function_print(t->value.func); break;
   case PARSER_TOPLEVEL_KIND_EXPR: parser_expression_print(t->value.expression); break;
+  case PARSER_TOPLEVEL_KIND_RECORD: parser_record_print(t->value.record); break;
   default: DEBUGBREAK; break;
   }
 }
@@ -168,6 +186,18 @@ parser_function_print(parser_func_t * f) {
   go_node_name_print(f->arguments);
   printf(" = ");
   parser_expression_print(f->expression);
+}
+
+void
+parser_record_print(parser_record_t * r) {
+  printf("record %s(", r->name.buffer);
+  list_t /*<string_t>*/ * li = r->accessors;
+  while(li != nullptr) {
+    string_t * v = (string_t *)(&(li->value));
+    printf(LIST_NEXT(li) == nullptr ? "%s" : "%s, ", v->buffer);
+    li = LIST_NEXT(li);
+  }
+  printf(")");
 }
 
 void
@@ -261,7 +291,7 @@ parser_expression_free(parser_expression_t * expr) {
       break;
     case EXPR_KIND_TUPLE: {
       parser_expression_tuple_list_t * tl = &expr->value.tuple;
-	    parser_expression_free(tl->value);
+      parser_expression_free(tl->value);
       tl = tl->next;
       while(tl != nullptr) {
 	parser_expression_tuple_list_t * v = tl->next;

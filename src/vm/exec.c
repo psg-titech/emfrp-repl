@@ -264,6 +264,7 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
     CHKERR2(err2, machine_new_variable_table(m));
     CHKERR2(err2, machine_assign_variable_tuple(m, callee->value.function.function.ast.program->value.function.arguments, args));
     CHKERR2(err2, exec_ast(m, callee->value.function.function.ast.program->value.function.body, out));
+    machine_set_variable_table(m, prev_vt);
     break;
   case EMFRP_PROGRAM_KIND_NOTHING: break;
   case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(out, args)); break;
@@ -277,8 +278,6 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
 			      args, out)); break;
   default: DEBUGBREAK; break;
   }
-  CHKERR2(err2, machine_pop_variable_table(m));
-  machine_set_variable_table(m, prev_vt);
   machine_restore_stack_state(m, state);
   return EM_RESULT_OK;
  err2: machine_set_variable_table(m, prev_vt);

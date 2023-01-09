@@ -274,6 +274,12 @@ object_new_tupleN(object_t * out, size_t size) {
   return em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *));
 }
 
+// ! Construct the new symbol object.
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param symbol The string of symbol.
+ * \return The result.
+ */
 static inline em_result
 object_new_symbol(object_t * out, string_t symbol) {
   out->kind = EMFRP_OBJECT_SYMBOL | (out->kind & 1);
@@ -281,6 +287,13 @@ object_new_symbol(object_t * out, string_t symbol) {
   return EM_RESULT_OK;
 }
 
+// ! Construct the new function object(ast).
+/* !
+ * \param out The output object **Must be allocated before calling this function.**
+ * \param closure The environment.
+ * \param ast The program.
+ * \return The result.
+ */
 static inline em_result
 object_new_function_ast(object_t * out, object_t * closure, parser_expression_t * ast) {
   if(ast->kind != EXPR_KIND_FUNCTION) {
@@ -294,6 +307,34 @@ object_new_function_ast(object_t * out, object_t * closure, parser_expression_t 
   ast->value.function.reference_count++;
   return EM_RESULT_OK;
 }
+
+static inline em_result
+object_new_function_constructor(object_t * out, object_t * tag, size_t arity) {
+  if(object_kind(tag) != EMFRP_OBJECT_SYMBOL) {
+    DEBUGBREAK;
+    return EM_RESULT_INVALID_ARGUMENT;
+  }
+  out->kind = EMFRP_OBJECT_FUNCTION | (out->kind & 1);
+  out->value.function.kind = EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT;
+  out->value.function.function.construct.arity = arity;
+  out->value.function.function.construct.tag = tag;
+  return EM_RESULT_OK;
+}
+
+
+static inline em_result
+object_new_function_accessor(object_t * out, object_t * tag, size_t index) {
+  if(object_kind(tag) != EMFRP_OBJECT_SYMBOL) {
+    DEBUGBREAK;
+    return EM_RESULT_INVALID_ARGUMENT;
+  }
+  out->kind = EMFRP_OBJECT_FUNCTION | (out->kind & 1);
+  out->value.function.kind = EMFRP_PROGRAM_KIND_RECORD_ACCESS;
+  out->value.function.function.access.index = index;
+  out->value.function.function.access.tag = tag;
+  return EM_RESULT_OK;
+}
+
 
 // ! Construct the new vairbale table object.
 /* !

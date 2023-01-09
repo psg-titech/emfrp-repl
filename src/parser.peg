@@ -58,12 +58,17 @@ toplevel <- s:definition { $$ = s; }
 definition <- nd:node_definition { $$ = parser_toplevel_new_node(nd); }
             / dd:data_definition { $$ = parser_toplevel_new_data(dd); }
             / fd:func_definition { $$ = parser_toplevel_new_func(fd); }
+	    / rd:record_definition { $$ = parser_toplevel_new_record(rd); }
 
 node_definition <- _ 'node' __ 'init' _ '[' _ ie:expression _ ']' _ d:deconstructor (__ 'as' __ i:identifier)? _ '=' _ e: expression _ EOL { $$ = parser_node_new(d, e, ie, i); }
                  / _ 'node' __ d:deconstructor (__ 'init' _ '[' _ ie:expression _ ']')? (__ 'as' __ i:identifier)? _ '=' _ e: expression _ EOL { $$ = parser_node_new(d, e, ie, i); }
 
 data_definition <- _ 'data' __ d:deconstructor _ '=' _ e:expression { $$ = parser_data_new(d, e); }
 func_definition <- _ 'func' __ i:identifier _ '(' _ ds:empty_or_deconstructors _ ')' _ '=' _ e:expression { $$ = parser_func_new(i, ds, e); }
+record_definition <- _ 'record' __ r:identifier _ '(' _ ds:identifiers _ ')' { $$ = parser_record_new(r, ds); }
+
+identifiers <- i:identifier ',' _ is:identifiers { $$ = parser_identifiers_prepend(i, is); }
+             / i:identifier                      { $$ = parser_identifiers_prepend(i, nullptr); }
 
 deconstructor <- i:identifier                    { $$ = parser_deconstructor_new(i); }
                  / '(' _ ds:deconstructors _ ')' { $$ = parser_deconstructors_new(ds); }

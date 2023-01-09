@@ -42,29 +42,53 @@ machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
   switch(prog->kind) {
   case PARSER_TOPLEVEL_KIND_EXPR: return exec_ast(self, prog->value.expression, out);
   case PARSER_TOPLEVEL_KIND_DATA: {
-      parser_data_t * d = prog->value.data;
-      object_t * o = nullptr;
-      CHKERR(exec_ast(self, d->expression, &o));
-      if(d->name.isString) {
-	CHKERR(machine_assign_variable(self, d->name.value.string, o));
-      } else
-	CHKERR(machine_assign_variable_tuple(self, d->name.value.tuple, o));
-      break;
-    }
+    parser_data_t * d = prog->value.data;
+    object_t * o = nullptr;
+    CHKERR(exec_ast(self, d->expression, &o));
+    if(d->name.isString) {
+      CHKERR(machine_assign_variable(self, d->name.value.string, o));
+    } else
+      CHKERR(machine_assign_variable_tuple(self, d->name.value.tuple, o));
+    break;
+  }
   case PARSER_TOPLEVEL_KIND_FUNC: {
-      parser_func_t * f = prog->value.func;
-      parser_expression_t * e = parser_expression_new_function(f->arguments, f->expression);
-      if(e == nullptr) return EM_RESULT_OUT_OF_MEMORY;
+    parser_func_t * f = prog->value.func;
+    parser_expression_t * e = parser_expression_new_function(f->arguments, f->expression);
+    if(e == nullptr) return EM_RESULT_OUT_OF_MEMORY;
+    object_t * o = nullptr;
+    CHKERR(machine_alloc(self, &o));
+    CHKERR(object_new_function_ast(o, machine_get_variable_table(self)->this_object_ref, e));
+    CHKERR(machine_assign_variable(self, f->name, o));
+    break;
+  }
+  case PARSER_TOPLEVEL_KIND_NODE: {
+    exec_sequence_t * _ = nullptr;
+    return machine_add_node_ast(self, &_, prog->value.node);
+  }
+  case PARSER_TOPLEVEL_KIND_RECORD: {
+    size_t len = 0;
+    list_t /*<string_t*>*/ * li = prog->value.record->accessors;
+    for(;li != nullptr; li = LIST_NEXT(li)) len++;
+    object_t * tag = nullptr;
+    string_t tagname;
+    CHKERR(machine_alloc(self, &tag));
+    CHKERR(string_copy(&tagname, &(prog->value.record->name)));
+    CHKERR(object_new_symbol(tag, tagname));
+    CHKERR(machine_alloc(self, out));
+    CHKERR(object_new_function_constructor(*out, tag, len));
+    li = prog->value.record->accessors;
+    len = 0;
+    while(li != nullptr) {
+      string_t * v = (string_t *)(&(li->value));
       object_t * o = nullptr;
       CHKERR(machine_alloc(self, &o));
-      CHKERR(object_new_function_ast(o, machine_get_variable_table(self)->this_object_ref, e));
-      CHKERR(machine_assign_variable(self, f->name, o));
-      break;
+      CHKERR(object_new_function_accessor(o, tag, len));
+      CHKERR(machine_assign_variable(self, v, o));
+      len++;
+      li = li->next;
     }
-  case PARSER_TOPLEVEL_KIND_NODE: {
-      exec_sequence_t * _ = nullptr;
-      return machine_add_node_ast(self, &_, prog->value.node);
-    }
+    CHKERR(machine_assign_variable(self, &(prog->value.record->name), *out));
+  }
   }
  err:
   return errres;
