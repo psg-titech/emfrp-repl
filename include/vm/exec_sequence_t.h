@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/9
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
@@ -37,7 +37,7 @@ typedef struct node_or_tuple_t {
 #define exec_sequence_marked_modified(v) (((v)->program_kind & 2) != 0)
 #define exec_sequence_mark_lastfailed(v) ((v)->program_kind |= 4)
 #define exec_sequence_unmark_lastfailed(v) ((v)->program_kind &= (~4))
-#define exec_sequence_marked_lsatfailed(v) (((v)->program_kind & 4) != 0)
+#define exec_sequence_marked_lastfailed(v) (((v)->program_kind & 4) != 0)
 
 typedef emfrp_program_kind exec_sequence_program_kind;
 

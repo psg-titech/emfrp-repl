@@ -2,11 +2,12 @@
  * @file   exec_sequence_t.c
  * @brief  Execution Sequence.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2023/1/9
  ------------------------------------------- */
 #include "vm/exec_sequence_t.h"
 #include "vm/exec.h"
 #include "vm/gc.h"
+#include <stdio.h>
 
 em_result
 exec_sequence_set_nil(machine_t * machine, node_or_tuple_t * nt) {
@@ -120,8 +121,20 @@ exec_sequence_update_value(machine_t * machine, exec_sequence_t * self) {
     break;
   case EMFRP_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
   }
-  return exec_sequence_update_value_given_object(machine, self, new_obj);
+  errres = exec_sequence_update_value_given_object(machine, self, new_obj);
+  if(errres != EM_RESULT_OK) goto err;
+  exec_sequence_unmark_lastfailed(self);
+  return errres;
  err:
+  if(errres != EM_RESULT_OK && !exec_sequence_marked_lastfailed(self)) {
+    exec_sequence_mark_lastfailed(self);
+    printf("The execution of ");
+    if(self->node_definitions != nullptr)
+      node_or_tuple_debug_print(self->node_definitions);
+    else
+      printf("%s", self->node_definition->name.buffer);
+    printf(" is failed: %s\n", EM_RESULT_STR_TABLE[errres]);
+  }
   return errres;
 }
 
