@@ -2,7 +2,7 @@
  * @file   arraylist_t.c
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/12
+ * @date   2023/1/10
  ------------------------------------------- */
 #include "collections/arraylist_t.h"
 
@@ -114,6 +114,6 @@ arraylist_set(arraylist_t * self, size_t index, size_t item_size, void * value) 
 void
 arraylist_free(arraylist_t * self) {
   em_free(self->buffer);
-  self->buffer == nullptr;
+  self->buffer = nullptr;
   self->length = 0;
 }

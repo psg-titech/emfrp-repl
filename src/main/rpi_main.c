@@ -4,7 +4,7 @@
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
  * @date   2023/1/6
  ------------------------------------------- */
-
+#if defined(RPI_PICO)
 #include <stdio.h>
 #include "hardware/gpio.h"
 #include "pico/binary_info.h"
@@ -83,3 +83,5 @@ int main() {
   while(1){       sleep_ms(1000);}
   
 }
+
+#endif

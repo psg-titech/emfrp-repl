@@ -377,6 +377,7 @@ parser_expression_free(parser_expression_t * expr) {
       em_free(expr->value.function.arguments);
       break;
     }
+    default: break;
     }
   free(expr);
 }
