@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/31
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
@@ -13,6 +13,10 @@
 #include "vm/gc.h"
 #include "vm/exec_sequence_t.h"
 #include "vm/variable_t.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct object_t;
 struct parser_node_t;
@@ -245,3 +249,7 @@ em_result machine_add_output_node(machine_t * self, string_t name, node_event_de
 
 // ! [DEBUG] Print node definitions.
 void machine_debug_print_definitions(machine_t * self);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

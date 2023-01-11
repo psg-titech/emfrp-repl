@@ -2,9 +2,13 @@
  * @file   em_result.h
  * @brief  Status Code
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 // Apple Clang warns, if there is not additional parences.
 #define CHKERR(v) if((errres = (v))) goto err;
@@ -36,3 +40,7 @@ typedef enum em_result_t {
 } em_result;
 
 extern const char * const EM_RESULT_STR_TABLE[];
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

@@ -7,6 +7,11 @@
 #pragma once
 #include "string_t.h"
 #include "collections/dictionary_t.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct object_t;
 struct dictionary_t;
 struct machine_t;
@@ -82,3 +87,7 @@ void variable_deep_free(variable_t * v);
  * \param v The variable table to be freed
  */
 void variable_table_free(variable_table_t * v);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

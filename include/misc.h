@@ -2,12 +2,17 @@
  * @file   misc.h
  * @brief  Miscellaneous
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/30
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #if defined(_WIN32)
 #include <Windows.h>
 #include <tchar.h>
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+#if defined(_WIN32)
 typedef TCHAR char_t;
 #define em_strlen(s) _tcslen(s)
 #define strdup(s) _strdup(s)
@@ -36,3 +41,7 @@ typedef void* nullptr_t;
 #elif __clang__	
 #define DEBUGBREAK __builtin_debugtrap()
 #endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

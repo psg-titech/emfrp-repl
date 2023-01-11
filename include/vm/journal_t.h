@@ -2,11 +2,15 @@
  * @file   journal_t.h
  * @brief  Journaling on redefining nodes.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/12
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
 #include "vm/node_t.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 typedef struct journal_t {
   // The next entry of the journal.
@@ -40,3 +44,7 @@ void revert_from_journal(journal_t * j);
  * \param j The journal to be freed.
  */
 void journal_free(journal_t ** j);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

@@ -2,13 +2,17 @@
  * @file   arraylist_t.h
  * @brief  Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 
 #include "em_result.h"
 #include "emmem.h"
 #include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 // ! Expandable Array (Similar to vector<T> in C++, ArrayList in C#/Java
 /* !
@@ -99,3 +103,7 @@ void arraylist_set(arraylist_t * self, size_t index, size_t item_size, void * va
 
 // ! Freeing the array list.
 void arraylist_free(arraylist_t * self);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

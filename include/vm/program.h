@@ -2,9 +2,13 @@
  * @file   program.h
  * @brief  Emfrp Program Representation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct object_t;
 
@@ -30,3 +34,8 @@ typedef enum emfrp_program_kind {
   // ! containing record accessor.
   EMFRP_PROGRAM_KIND_RECORD_ACCESS = 5 << EXEC_SEQUENCE_PROGRAM_KIND_SHIFT
 } emfrp_program_kind;
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

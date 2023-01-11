@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
@@ -10,6 +10,10 @@
 #include "collections/arraylist_t.h"
 #include "vm/node_t.h"
 #include "vm/program.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct machine_t;
 
@@ -164,3 +168,7 @@ exec_sequence_free(exec_sequence_t * es);
 // ! Print out the given node_or_tuple_t.
 void
 node_or_tuple_debug_print(node_or_tuple_t * nt);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

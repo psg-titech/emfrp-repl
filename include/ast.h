@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
@@ -10,6 +10,10 @@
 #include "string_t.h"
 #include <stdint.h>
 #include "collections/list_t.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct parser_expression_t;
 
@@ -716,3 +720,6 @@ void parser_function_print(parser_func_t * f);
  */
 void parser_expression_print(parser_expression_t * e);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

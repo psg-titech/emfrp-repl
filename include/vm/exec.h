@@ -2,7 +2,7 @@
  * @file   exec.h
  * @brief  Emfrp REPL Interpreter
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/29
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
@@ -11,6 +11,10 @@
 #include "vm/machine.h"
 #include "ast.h"
 #include "collections/list_t.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 // ! Execute AST.
 /* !
@@ -36,3 +40,7 @@ em_result get_dependencies_ast(parser_expression_t * v, list_t /*<string_t>*/ **
  * \return Whether v references str.
  */
 bool check_depends_on_ast(parser_expression_t * v, string_t * str);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

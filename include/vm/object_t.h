@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
@@ -12,6 +12,10 @@
 #include "emmem.h"
 #include "vm/program.h"
 #include "ast.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct variable_table_t;
 // ! Kind of object_t.
@@ -373,3 +377,7 @@ object_new_stack(object_t * out, size_t cap) {
  * \param v The object to be printed.
  */
 void object_print(object_t * v);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

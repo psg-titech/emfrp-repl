@@ -2,11 +2,15 @@
  * @file   dictionary_t.h
  * @brief  Dictionary
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/21
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #include "collections/list_t.h"
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 #define DICTIONARY_TABLE_SIZE 16
 
 // ! Dictionary
@@ -70,3 +74,7 @@ bool dictionary_get(dictionary_t * self, void ** out, size_t(hasher(void *)), bo
 bool dictionary_contains(dictionary_t * self, size_t(hasher(void *)), bool(comparer(void *, void *)), void * search_value);
 
 #define FOREACH_DICTIONARY(li, dic) li = (dic)->values[0]; for(int i = 0; i < DICTIONARY_TABLE_SIZE; ++i, li = (dic)->values[i])
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

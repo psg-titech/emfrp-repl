@@ -2,7 +2,7 @@
  * @file   string_t.h
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/9/27
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
@@ -11,6 +11,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 // ! Pascal String
 typedef struct string_t {
   // ! Buffer
@@ -82,3 +85,7 @@ size_t string_hash(const string_t * self);
 static inline bool string_compare(const string_t * v1, const string_t * v2) {
   return (v1->length == v2->length) && (0 == strncmp(v1->buffer, v2->buffer, v1->length));
 }
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

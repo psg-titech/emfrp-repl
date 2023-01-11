@@ -2,13 +2,17 @@
  * @file   list_t.h
  * @brief  List
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/14
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #include "emmem.h"
 #include "em_result.h"
 #include <stdlib.h>
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 // ! Linked List(Stack)
 typedef struct list_t {
@@ -159,3 +163,7 @@ em_result queue_add_head(queue_t * out, size_t value_size, void * value);
 #define queue_add_head2(self, ty, out) queue_add_head(self, sizeof(ty), out)
 
 #define FOREACH_LIST(v, li) if(li!=nullptr)for(v = &(li->value); !LIST_IS_EMPTY(&li); li = LIST_NEXT(li), v = &(li->value))
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

@@ -2,13 +2,16 @@
  * @file   gc.h
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/1
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #pragma once
 #include "em_result.h"
 #include "vm/object_t.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 // ! Size of objects.
 #define MEMORY_MANAGER_HEAP_SIZE 512
 // ! When memory_manager_t::remaining is below this, the gc starts.
@@ -82,3 +85,7 @@ em_result memory_manager_force_gc(memory_manager_t * self);
  */
 void memory_manager_return(memory_manager_t * self, object_t * v);
 #define machine_return(self, v) memory_manager_return(self->memory_manager, v)
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
