@@ -55,3 +55,6 @@ Execute `install.ps1`, or `install.sh` in the esp-idf repository.
 3. Open `project/esp-idf`
 4. Execute `idf.py set-target esp32` in your first time.
 5. Execute `idf.py build` and flash `idf.py flash -p <PORT>`, and then monitor by `idf.py monitr -p <PORT>`.
+
+## Compilation for ESP8266
+DOES NOT WORK DUE TO A LINKER ISSUE.

@@ -1,11 +1,13 @@
 %prefix "parser"
 
 %value "void *"
-%header {
+%earlyheader {
 #pragma once
 #include "string_t.h"
 #include "emmem.h"
 #include "em_result.h"
+
+#include "extern_c_pre.h"
 typedef struct parser_reader_t {
   string_t * line;
   int cur;
@@ -16,6 +18,10 @@ parser_reader_new(parser_reader_t * out, string_t * str);
 
 int
 parser_reader_getchar(parser_reader_t * reader);
+}
+
+%header {
+#include "extern_c_post.h"
 }
 
 %source {

@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/11
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -151,7 +151,7 @@ machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<decons
     if(len == 0) return EM_RESULT_OK;
     else return EM_RESULT_INVALID_ARGUMENT;
   }
-  object_t ** obj;
+  object_t ** obj = nullptr;
   switch(object_kind(v)) {
   case EMFRP_OBJECT_SYMBOL:
     if(len != 0) return EM_RESULT_INVALID_ARGUMENT;
@@ -195,7 +195,7 @@ machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<decons
     case DECONSTRUCTOR_IDENTIFIER: CHKERR(machine_assign_variable(self, dt->value.identifier, obj[i])); break;
     case DECONSTRUCTOR_TUPLE: CHKERR(machine_assign_variable_tuple(self, dt->value.tuple.tag, dt->value.tuple.data, obj[i]));  break;
     case DECONSTRUCTOR_INTEGER:
-      if(!object_is_integer(obj[i]) || dt->value.integer != object_get_integer(obj[i])) return EM_RESULT_INVALID_ARGUMENT;
+      return (!object_is_integer(obj[i]) || dt->value.integer != object_get_integer(obj[i])) ? EM_RESULT_INVALID_ARGUMENT : EM_RESULT_OK;
 #if EMFRP_ENABLE_FLOATING
     case DECONSTRUCTOR_FLOATING:
 #endif
@@ -358,6 +358,7 @@ machine_remove_previous_definition(machine_t * self, journal_t ** out, deconstru
     CHKERR(machine_remove_previous_definition(self, out, d));
   }
   break;
+  default: break;
   }
  err:
   return errres;
@@ -368,7 +369,6 @@ machine_add_nodes(machine_t * self, deconstructor_t * dt, node_or_tuple_t * node
   em_result errres = EM_RESULT_OK;
   switch(dt->kind) {
   case DECONSTRUCTOR_IDENTIFIER: { // string -> node
-    node_t * n = nullptr;
     CHKERR(machine_add_node(self, *(dt->value.identifier), &(node_ptr->value.node)));
     node_ptr->kind = NODE_OR_TUPLE_NODE;
     break;
@@ -426,7 +426,9 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
     if(n->as != nullptr) {
       CHKERR2(err2, machine_add_node(self, *(n->as), &(new_entry->node_definition)));
     }
+    break;
   }
+  default: DEBUGBREAK; break;
   }
   if(journal != nullptr) {
     machine_cleanup(&(self->execution_list));

@@ -387,7 +387,7 @@ check_depends_on_ast(parser_expression_t * v, string_t * str) {
       for(parser_expression_tuple_list_t * li = &(v->value.tuple);
           li != nullptr; li = li->next)
         if(check_depends_on_ast(li->value, str)) return true;
-      return false;	 
+      return false;
     case EXPR_KIND_IF:
       return check_depends_on_ast(v->value.ifthenelse.cond, str)
         || check_depends_on_ast(v->value.ifthenelse.then, str)
@@ -399,7 +399,8 @@ check_depends_on_ast(parser_expression_t * v, string_t * str) {
             li != nullptr; li = li->next)
           if(check_depends_on_ast(li->value, str)) return true;
       }
-      return false;	 
+      return false;
+     default: break;
   }
   return false;
 }

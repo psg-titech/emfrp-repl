@@ -36,7 +36,7 @@ exec_sequence_set_nil(machine_t * machine, node_or_tuple_t * nt) {
 
 em_result
 exec_sequence_set_nodes(machine_t * machine, node_or_tuple_t * nt, object_t * v) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   if(v == nullptr) return exec_sequence_set_nil(machine, nt);
   switch(nt->kind) {
   case NODE_OR_TUPLE_NONE: return EM_RESULT_OK;
