@@ -1,5 +1,5 @@
 project( emfrp-repl )
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.1)
 set(PROJ_DIR "${PROJECT_SOURCE_DIR}/../..")
 include(${PROJ_DIR}/src/CMakeLists.txt)
 set_source(${PROJ_DIR})

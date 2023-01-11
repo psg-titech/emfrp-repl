@@ -9,7 +9,9 @@ This is the tested environment.
    * gcc 8.3 (also clang)
  * Haiku R1/beta hrev55181+67
    * gcc 11.2
- * macOS 13 Ventura
+ * Debian 11
+   * clang 11.0 or 10.2
+ * macOS 13 Ventura -- currently broken, due to CMake on macOS's bug.
    * MacBook Air (M1, 2020)
 
 # How to build
@@ -17,6 +19,7 @@ This is the tested environment.
 ### clang/gcc based OSes
 1. Execute `project/common/setup-?.sh` as a privilaged user.  
    FreeBSD and DragonFly: setup-bsd.sh  
+   Debian: setup-apt.sh  
    macOS: setup-macos-brew.sh (brew required)  
    Haiku OS: setup-haiku.sh  
 2. Execute the Makefile in `./packcc/build/clang` or `./packcc/build/gcc`.
