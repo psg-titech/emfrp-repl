@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/1/14
  ------------------------------------------- */
 
 #pragma once
@@ -275,6 +275,7 @@ static inline em_result
 object_new_tupleN(object_t * out, size_t size) {
   out->kind = EMFRP_OBJECT_TUPLEN | (out->kind & 1);
   out->value.tupleN.length = size;
+  out->value.tupleN.tag = nullptr;
   return em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *));
 }
 

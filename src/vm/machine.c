@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/1/14
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -281,7 +281,6 @@ bool has_cyclicreference(string_t * newnode_str, list_t * executionlist_head, li
   for(list_t * pcur = executionlist_head; pcur != cur; pcur = pcur->next) {
     exec_sequence_t * es = (exec_sequence_t *)(&(pcur->value));
     if(exec_sequence_marked_modified(es)) continue; // Skip!
-    printf("%s <-> %s\n", newnode_str->buffer, es->node_definition->name.buffer);
     if(exec_sequence_program_kind(es) == EMFRP_PROGRAM_KIND_AST
        && check_depends_on_ast(es->program.ast, newnode_str))
       return true;
