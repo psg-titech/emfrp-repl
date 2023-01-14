@@ -2,7 +2,7 @@
  * @file   em_result.h
  * @brief  Status Code
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/1/14
  ------------------------------------------- */
 #pragma once
 
@@ -36,7 +36,9 @@ typedef enum em_result_t {
   // ! Missing Identifier
   EM_RESULT_MISSING_IDENTIFIER = 17,
   // ! Cyclic Reference
-  EM_RESULT_CYCLIC_REFERENCE = 18
+  EM_RESULT_CYCLIC_REFERENCE = 18,
+  // ! Parse Error
+  EM_RESULT_PARSE_ERROR = 19
 } em_result;
 
 extern const char * const EM_RESULT_STR_TABLE[];

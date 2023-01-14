@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/1
+ * @date   2023/1/14
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -14,25 +14,27 @@ typedef struct emfrp_t{
   machine_t * machine;
 } emfrp_t;
 
-EM_EXPORTDECL emfrp_t *
-emfrp_create(void) {
-  em_result errres;
+EM_EXPORTDECL em_result
+emfrp_create(emfrp_t ** out) {
+  em_result errres = EM_RESULT_OK;
   emfrp_t * ret = nullptr;
   CHKERR(em_malloc((void **)&ret, sizeof(emfrp_t)));
   ret->machine = nullptr;
   CHKERR(em_malloc((void **)&(ret->machine), sizeof(machine_t)));
   machine_new(ret->machine);
-  return ret;
+  *out = ret;
+  return EM_RESULT_OK;
  err:
   if(ret != nullptr && ret->machine != nullptr)
     em_free(ret->machine);
   if(ret != nullptr)
     em_free(ret);
-  return nullptr;
+  return errres;
 }
 
-EM_EXPORTDECL bool
+EM_EXPORTDECL em_result
 emfrp_repl(emfrp_t * self, char * str, object_t ** out) {
+  em_result errres = EM_RESULT_OK;
   parser_reader_t parser_reader;
   parser_toplevel_t * parsed;
   string_t line;
@@ -42,58 +44,49 @@ emfrp_repl(emfrp_t * self, char * str, object_t ** out) {
   if(!parser_parse(ctx, (void **)&parsed)) {
     parser_toplevel_print(parsed);
     printf("\n");
-    em_result res = machine_exec(self->machine, parsed, out);
-    if(res != EM_RESULT_OK) {
+    errres = machine_exec(self->machine, parsed, out);
+    if(errres != EM_RESULT_OK)
       parser_toplevel_free_deep(parsed);
-      goto fail;
-    } else
+    else
       parser_toplevel_free_shallow(parsed);
   } else
-    goto fail;
+    errres = EM_RESULT_PARSE_ERROR;
   parser_destroy(ctx);
-  machine_debug_print_definitions(self->machine);
-  return false;
-fail:
-  parser_destroy(ctx);
-  return true;
+  if(errres == EM_RESULT_OK)
+    machine_debug_print_definitions(self->machine);
+  return errres;
 }
 
-EM_EXPORTDECL bool
-emfrp_add_input_node_definition(emfrp_t * self, char * node_name, em_input_node_callback callback) {
+EM_EXPORTDECL em_result
+emfrp_add_input_node(emfrp_t * self, char * node_name, em_input_callback callback) {
+  em_result errres = EM_RESULT_OK;
   string_t s, s_dup;
   string_new1(&s, node_name);
-  if(string_copy(&s_dup, &s) != EM_RESULT_OK) return true;
-  return machine_add_node_callback(self->machine, s_dup, callback) != EM_RESULT_OK;
-} 
-
-EM_EXPORTDECL bool
-emfrp_indicate_node_update(emfrp_t * self, char * node_name, em_object_t * value) {
-  string_t s;
-  em_result errres;
-  string_new1(&s, node_name);
-  CHKERR(machine_set_value_of_node(self->machine, &s, value));
-  CHKERR(machine_indicate(self->machine, &s, 1));
-  return false;
-err:
-  return true;
+  CHKERR(string_copy(&s_dup, &s));
+  return machine_add_node_callback(self->machine, s_dup, callback);
+ err: return errres;
 }
 
-EM_EXPORTDECL bool
-emfrp_update(emfrp_t * self) {
-  em_result errres;
-  CHKERR(machine_indicate(self->machine, nullptr, 0));
-  return false;
-err:
-  return true;
-}
-
-
-EM_EXPORTDECL bool
-emfrp_add_output_node_definition(emfrp_t * self, char * node_name, em_output_node_callback callback) {
+EM_EXPORTDECL em_result
+emfrp_add_output_node(emfrp_t * self, char * node_name, em_output_callback callback) {
+  em_result errres = EM_RESULT_OK;
   string_t s, s_dup;
   string_new1(&s, node_name);
-  if (string_copy(&s_dup, &s) != EM_RESULT_OK) return true;
+  CHKERR(string_copy(&s_dup, &s));
   return machine_add_output_node(self->machine, s_dup, callback) != EM_RESULT_OK;
+ err: return errres;
+}
+
+EM_EXPORTDECL em_result
+emfrp_set_node_value(emfrp_t * self, char * node_name, em_object_t * v) {
+  string_t s;
+  string_new1(&s, node_name);
+  return machine_set_value_of_node(self->machine, &s, v);
+}
+
+EM_EXPORTDECL em_result
+emfrp_update(emfrp_t * self) {
+  return machine_indicate(self->machine, nullptr, 0);
 }
 
 EM_EXPORTDECL em_object_t *
@@ -102,6 +95,7 @@ emfrp_create_int_object(int32_t num) {
   object_new_int(&output, num);
   return output;
 }
+
 EM_EXPORTDECL em_object_t *
 emfrp_get_true_object(void) {
   return &object_true;
@@ -114,4 +108,10 @@ emfrp_get_false_object(void) {
 EM_EXPORTDECL int32_t
 emfrp_get_integer(em_object_t * v) {
     return object_get_integer(v);
+}
+
+
+EM_EXPORTDECL void
+emfrp_print_object(em_object_t * v) {
+  object_print(v);
 }

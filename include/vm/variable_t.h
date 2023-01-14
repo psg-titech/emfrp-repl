@@ -2,7 +2,7 @@
  * @file   variable_t.h
  * @brief  The variable table.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/12/25
+ * @date   2023/1/11
  ------------------------------------------- */
 #pragma once
 #include "string_t.h"
