@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/14
  ------------------------------------------- */
 
 #include "ast.h"
@@ -205,10 +205,10 @@ void
 parser_node_print(parser_node_t * n) {
   switch(n->name.kind) {
   case DECONSTRUCTOR_IDENTIFIER:
-    printf("data %s = ", n->name.value.identifier->buffer);
+    printf("node %s = ", n->name.value.identifier->buffer);
     break;
   case DECONSTRUCTOR_TUPLE:
-    printf("data ");
+    printf("node ");
     go_deconstructor_print(n->name.value.tuple.data);
     printf(" = ");
     break;
