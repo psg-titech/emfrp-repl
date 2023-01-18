@@ -34,7 +34,7 @@ arraylist_append(arraylist_t * self, size_t item_size, void * value) {
   em_result errres;
   if(self->length + 1 > self->capacity)
     CHKERR(arraylist_resize(self, item_size));
-  memcpy(self->buffer + (item_size * self->length), value, item_size);
+  memcpy((void *)((size_t)self->buffer + (size_t)(item_size * self->length)), value, item_size);
   self->length++;
   return EM_RESULT_OK;
  err:
@@ -53,8 +53,8 @@ arraylist_insert(arraylist_t * self, size_t index, size_t item_size, void * valu
 #endif
   if(self->length + 1 > self->capacity)
     CHKERR(arraylist_resize(self, item_size));
-  memmove(self->buffer + (item_size * (index + 1)), self->buffer + (item_size * index), (self->length - index) * item_size); 
-  memcpy(self->buffer + (item_size * index), value, item_size);
+  memmove((void *)((size_t)self->buffer + (item_size * (index + 1))), (void *)((size_t)self->buffer + (item_size * index)), (self->length - index) * item_size);
+  memcpy((void *)((size_t)self->buffer + (item_size * index)), value, item_size);
   self->length++;
   return EM_RESULT_OK;
  err:
@@ -65,9 +65,9 @@ void
 arraylist_remove(arraylist_t * self, void * out, size_t index, size_t item_size) {
   item_size /= sizeof(char);
   if(item_size > 0 && out != nullptr)
-    memcpy(out, self->buffer + (item_size * index), item_size);
-  memcpy(self->buffer + (item_size * index),
-	 self->buffer + (item_size * index) + item_size,
+    memcpy(out, (void *)((size_t)self->buffer + (item_size * index)), item_size);
+  memcpy((void *)((size_t)self->buffer + (item_size * index)),
+      (void *)((size_t)self->buffer + (item_size * index) + item_size),
 	 item_size * (self->length - index - 1));
   self->length--;
 }
@@ -75,18 +75,18 @@ arraylist_remove(arraylist_t * self, void * out, size_t index, size_t item_size)
 void arraylist_removeinsert(arraylist_t * self, void ** out, size_t remove_index, size_t insert_index, size_t item_size, void * value) {
   item_size /= sizeof(char);
   if(item_size > 0 && out != nullptr)
-    memcpy(out, self->buffer + (item_size * remove_index), item_size);
+    memcpy(out, (void *)((size_t)self->buffer + (item_size * remove_index)), item_size);
   if(remove_index == insert_index) {
   } else if(remove_index < insert_index)
-    memcpy(self->buffer + (item_size * remove_index),
-	   self->buffer + (item_size * remove_index) + item_size,
+    memcpy((void *)((size_t)self->buffer + (item_size * remove_index)),
+        (void *)((size_t)self->buffer + (item_size * remove_index) + item_size),
 	   item_size * (insert_index - remove_index));
   else
-    memmove(self->buffer + (item_size * (insert_index + 1)),
-            self->buffer + (item_size * insert_index),
+    memmove((void *)((size_t)self->buffer + (item_size * (insert_index + 1))),
+        (void *)((size_t)self->buffer + (item_size * insert_index)),
             (remove_index - insert_index) * item_size);
   
-  memcpy(self->buffer + (item_size * insert_index), value, item_size);
+  memcpy((void *)((size_t)self->buffer + (item_size * insert_index)), value, item_size);
 }
 
 void
@@ -97,7 +97,7 @@ arraylist_get(arraylist_t * self, void * out, size_t index, size_t item_size) {
     DEBUGBREAK;
   }
 #endif
-  memcpy(out, self->buffer + (item_size * index), item_size);
+  memcpy(out, (void *)((size_t)self->buffer + (item_size * index)), item_size);
 }
 
 void
@@ -108,7 +108,7 @@ arraylist_set(arraylist_t * self, size_t index, size_t item_size, void * value) 
     DEBUGBREAK;
   }
 #endif
-  memcpy(self->buffer + (item_size * index), value, item_size);
+  memcpy((void *)((size_t)self->buffer + (item_size * index)), value, item_size);
 }
 
 void

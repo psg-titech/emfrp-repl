@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/14
  ------------------------------------------- */
 #include "emmem.h"
 #include "ast.h"
@@ -91,7 +91,7 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
       if(cur->value.variable_table.ptr->parent != nullptr)
 	return push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref);
       break;
-    }
+      } break;
     case EMFRP_OBJECT_FUNCTION: {
       switch(cur->value.function.kind) {
       case EMFRP_PROGRAM_KIND_AST:
@@ -104,6 +104,7 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
 	return push_worklist(self, cur->value.function.function.access.tag);
       default: DEBUGBREAK; break;
       }
+      break;
     }
     case EMFRP_OBJECT_FREE:
     case EMFRP_OBJECT_STRING:

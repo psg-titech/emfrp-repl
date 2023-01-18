@@ -2,7 +2,7 @@
  * @file   app_main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/1
+ * @date   2023/1/18
  ------------------------------------------- */
 #if defined(__ESP_IDF__)
 
@@ -61,7 +61,6 @@ void mainTask(void) {
   string_t line;
   parser_reader_t parser_reader;
   parser_toplevel_t * parsed;
-  object_t * result_object;
   string_null(&line);
   initialize_console();
   machine_new(&m);
@@ -81,7 +80,7 @@ void mainTask(void) {
     parser_context_t *ctx = parser_create(&parser_reader);
     if(!parser_parse(ctx, (void **)&parsed)) {
       object_t * o = nullptr;
-      printf("Heap free size: %d\n", esp_get_free_heap_size());
+      printf("Heap free size: %ld\n", esp_get_free_heap_size());
       parser_toplevel_print(parsed);
       printf("\n");
       em_result res = machine_exec(&m, parsed, &o);
@@ -99,7 +98,7 @@ void mainTask(void) {
       machine_debug_print_definitions(&m);
     }
     parser_destroy(ctx);
-    printf("Heap free size: %d\n", esp_get_free_heap_size());
+    printf("Heap free size: %ld\n", esp_get_free_heap_size());
   }
   while(1){ vTaskDelay(100000); }
 }

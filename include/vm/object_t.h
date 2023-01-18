@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/1/18
  ------------------------------------------- */
 
 #pragma once
@@ -186,7 +186,7 @@ static inline bool object_is_boolean(object_t * v) {
  * \param v The integer object. Must be tested by object_is_integer.
  * \return The integer value.
  */
-static inline int32_t object_get_integer(object_t * v) {
+static inline int object_get_integer(object_t * v) {
 #if DEBUG
   if(!object_is_integer(v)) {
     fprintf(stderr, "Error: Invalid objcet type.\n");
@@ -194,7 +194,7 @@ static inline int32_t object_get_integer(object_t * v) {
   }
 #endif
   size_t ret = (size_t)v;
-  return (int32_t)(ret >> 2);
+  return ((int)ret >> 2);
 }
 
 
@@ -204,14 +204,14 @@ static inline int32_t object_get_integer(object_t * v) {
  * \param out The result
  * \return The status
  */
-static inline int32_t object_get_int(object_t * v, int32_t * o) {
+static inline int object_get_int(object_t * v, int32_t * o) {
 #if DEBUG
   if(!object_is_integer(v)) {
     return EM_RESULT_TYPE_MISMATCH;
   }
 #endif
   size_t ret = (size_t)v;
-  *o = (int32_t)(ret >> 2);
+  *o = ((int)ret >> 2);
   return EM_RESULT_OK;
 }
 
@@ -231,7 +231,7 @@ static inline void object_free(object_t * v) {
  * \param v The value.
  * \return The result.
  */
-static inline em_result object_new_int(object_t ** out, int32_t v) {
+static inline em_result object_new_int(object_t ** out, int v) {
   size_t * ret = (size_t *)out;
   *ret = (v << 2) | 1;
   return EM_RESULT_OK;

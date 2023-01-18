@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/1/18
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -110,7 +110,7 @@ machine_push(machine_t * self, object_t * obj) {
   }
 #endif
   object_t * st = self->stack;
-  int capacity = 0;
+  int32_t capacity = 0;
   CHKERR(object_get_int(st->value.stack.capacity, &capacity))
   if(st->value.stack.length == capacity) {
     CHKERR(em_reallocarray((void **)&(st->value.stack.data), (void *)(st->value.stack.data), capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
@@ -143,7 +143,7 @@ machine_pop(machine_t * self, object_t ** obj) {
 
 em_result
 machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, object_t * v) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   int len = 0;
   for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
   if(!object_is_pointer(v)) return EM_RESULT_INVALID_ARGUMENT;

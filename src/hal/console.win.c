@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Console Implementation for Windows
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/10/19
+ * @date   2023/1/18
  ------------------------------------------- */
 #if defined(_WIN32)
 #include "hal/console.h"
@@ -23,9 +23,10 @@ const DWORD ADD_SIZE = 64;
 
 em_result
 read_line(string_t * recycle_buffer) {
+    em_result errres = EM_RESULT_OK;
     printf("emfrp: ");
     if (recycle_buffer->length == 0) {
-        recycle_buffer->buffer = em_malloc(sizeof(char_t) * START_SIZE);
+        CHKERR(em_malloc(&(recycle_buffer->buffer), sizeof(char_t) * START_SIZE));
         recycle_buffer->length = START_SIZE;
         if (recycle_buffer->buffer == nullptr)
             return EM_RESULT_OUT_OF_MEMORY;
@@ -45,17 +46,18 @@ read_line(string_t * recycle_buffer) {
             hasNewLine |= buf[i] == '\r';
         readed += readChars;
         if (hasNewLine) break;
-        char_t * newBuf = em_reallocarray(recycle_buffer->buffer, sizeof(char_t), recycle_buffer->length + ADD_SIZE);
-        if (newBuf == nullptr)
-            return EM_RESULT_OUT_OF_MEMORY;
+        char_t * newBuf = nullptr;
+        CHKERR(em_reallocarray(&newBuf, recycle_buffer->buffer, sizeof(char_t), recycle_buffer->length + ADD_SIZE));
         buf = recycle_buffer->buffer + recycle_buffer->length;
         recycle_buffer->length += ADD_SIZE;
         toRead = ADD_SIZE;
     }
-    recycle_buffer->buffer = em_reallocarray(recycle_buffer->buffer, sizeof(char_t), readed + 1);
+    CHKERR(em_reallocarray(&(recycle_buffer->buffer), recycle_buffer->buffer, sizeof(char_t), readed + 1));
     recycle_buffer->length = readed;
     recycle_buffer->buffer[readed] = '\0';
     return EM_RESULT_OK;
+err:
+    return errres;
 }
 
 #endif

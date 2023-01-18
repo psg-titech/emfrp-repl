@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/1/18
  ------------------------------------------- */
 
 #include "ast.h"
@@ -257,7 +257,7 @@ parser_record_print(parser_record_t * r) {
 void
 parser_expression_print(parser_expression_t * e) {
   if(EXPR_KIND_IS_INTEGER(e))
-    printf("%d", (int32_t)((size_t)e>>1));
+    printf("%d", (int)e>>1);
   else if(EXPR_KIND_IS_BOOLEAN(e))
     printf(EXPR_IS_TRUE(e) ? "true" : "false");
   else if((e->kind & 1) == 1) {

@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/1/18
  ------------------------------------------- */
 
 #pragma once
@@ -128,7 +128,7 @@ typedef struct deconstructor_t {
       list_t /*<deconstructor_t>*/ * data;
     } tuple;
     // ! Integer
-    int32_t integer;
+    int integer;
 #if EMFRP_ENABLE_FLOATING
     // ! Floating number.
     float floating;
@@ -558,8 +558,8 @@ parser_expression_new_if(parser_expression_t * cond, parser_expression_t * then,
  * \return Malloc-ed and constructed parser_expression_t
  */
 static inline parser_expression_t *
-parser_expression_new_integer(int32_t num) {
-  return (parser_expression_t *)(size_t)((num << 1) | 0x1);
+parser_expression_new_integer(int num) {
+  return (parser_expression_t *)(int)((num << 1) | 0x1);
 }
 
 // ! Constructor of indentifier expression.

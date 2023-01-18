@@ -59,9 +59,9 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
   rro_is_integer = object_is_integer(rro);
   CHKERR2(err_state, machine_restore_stack_state(m, state));
   if(lro_is_integer && rro_is_integer) {
-    int32_t retVal = 0;
-    int32_t ll = object_get_integer(lro);
-    int32_t rr = object_get_integer(rro);
+    int retVal = 0;
+    int ll = object_get_integer(lro);
+    int rr = object_get_integer(rro);
     switch(kind) {
     case EXPR_KIND_ADDITION: retVal = ll + rr; break;
     case EXPR_KIND_SUBTRACTION: retVal = ll - rr; break;
