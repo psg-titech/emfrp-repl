@@ -155,7 +155,7 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
     self->sweeper++;
   }
 }
-
+#include <stdio.h>
 em_result
 memory_manager_gc(struct machine_t * self,
                   int mark_limit, int sweep_limit) {
@@ -167,13 +167,13 @@ memory_manager_gc(struct machine_t * self,
       mm->worklist_top = 0;
       CHKERR(push_worklist(mm, self->stack));
       CHKERR(push_worklist(mm, machine_get_variable_table(self)->this_object_ref));
-      list_t * li;
-      FOREACH_DICTIONARY(li, &self->nodes) {
-	void * v;
-        FOREACH_LIST(v, li) {
-          node_t * n = (node_t *)v;
+      for (int i = 0; i < DICTIONARY_TABLE_SIZE; ++i) {
+          list_t * li = self->nodes.values[i];
+        while(li != nullptr) {
+          node_t * n = (node_t *)(&(li->value));
 	  //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
           CHKERR(push_worklist(mm, n->value));
+          li = LIST_NEXT(li);
         }
       }
       mm->state = MEMORY_MANAGER_STATE_MARK;

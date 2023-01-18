@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/1/18
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -73,7 +73,7 @@ emfrp_add_output_node(emfrp_t * self, char * node_name, em_output_callback callb
   string_t s, s_dup;
   string_new1(&s, node_name);
   CHKERR(string_copy(&s_dup, &s));
-  return machine_add_output_node(self->machine, s_dup, callback) != EM_RESULT_OK;
+  return machine_add_output_node(self->machine, s_dup, callback);
  err: return errres;
 }
 
