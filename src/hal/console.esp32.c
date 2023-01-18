@@ -87,6 +87,8 @@ read_line(string_t * recycle_buffer) {
   }
  end:
   buf[start] = '\0';
+  if(recycle_buffer->length != nullptr)
+    string_free(recycle_buffer);
   string_new(recycle_buffer, buf, start);
   return EM_RESULT_OK;
 }

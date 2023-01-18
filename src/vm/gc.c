@@ -28,6 +28,7 @@ memory_manager_new(memory_manager_t ** out) {
   m->remaining = MEMORY_MANAGER_HEAP_SIZE;
   m->worklist[0] = nullptr;
   m->worklist_top = 0;
+  m->state = MEMORY_MANAGER_STATE_IDLE;
   return EM_RESULT_OK;
  err:
   return errres;

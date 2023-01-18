@@ -22,7 +22,7 @@ object_print(object_t * v) {
     printf("true");
   else if(v == &object_false)
     printf("false");
-  else {
+  else if(object_is_pointer(v)) {
     switch(object_kind(v)) {
     case EMFRP_OBJECT_SYMBOL: printf("%s", v->value.symbol.value.buffer); break;
     case EMFRP_OBJECT_STRING: printf("\"%s\"",v->value.string.value.buffer); break;

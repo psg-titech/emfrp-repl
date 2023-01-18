@@ -126,6 +126,9 @@ exec_sequence_update_value(machine_t * machine, exec_sequence_t * self) {
   exec_sequence_unmark_lastfailed(self);
   return errres;
  err:
+#if __ESP_IDF
+  return errres;
+#endif
   if(errres != EM_RESULT_OK && !exec_sequence_marked_lastfailed(self)) {
     exec_sequence_mark_lastfailed(self);
     printf("The execution of ");

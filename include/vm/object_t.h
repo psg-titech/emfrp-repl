@@ -247,6 +247,7 @@ static inline em_result
 object_new_tuple1(object_t * out, object_t * v) {
   out->kind = EMFRP_OBJECT_TUPLE1 | (out->kind & 1);
   out->value.tuple1.i0 = v;
+  out->value.tuple1.tag = nullptr;
   return EM_RESULT_OK;
 }
 
@@ -262,6 +263,7 @@ object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
   out->kind = EMFRP_OBJECT_TUPLE2 | (out->kind & 1);
   out->value.tuple2.i0 = v0;
   out->value.tuple2.i1 = v1;
+  out->value.tuple2.tag = nullptr;
   return EM_RESULT_OK;
 }
 
