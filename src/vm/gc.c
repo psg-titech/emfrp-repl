@@ -10,8 +10,8 @@
 #include "vm/machine.h"
 #include "vm/variable_t.h"
 
-#define MARK_LIMIT 10
-#define SWEEP_LIMIT 10
+#define MARK_LIMIT 20
+#define SWEEP_LIMIT 8
 
 em_result
 memory_manager_new(memory_manager_t ** out) {
