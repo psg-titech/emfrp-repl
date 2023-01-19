@@ -70,7 +70,7 @@ read_line(string_t * recycle_buffer) {
   while(1) {
     len = uart_read_bytes(REPL_PROMPT_NUM, &buf[start], sizeof(buf) - start, 0);
     if(len == 0) {
-      vTaskDelay(30);
+      vTaskDelay(3);
       continue;
     }
     int count = len + start;
