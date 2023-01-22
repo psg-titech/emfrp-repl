@@ -201,6 +201,7 @@ exec_access_record(object_t * tag, size_t index, object_t * args, object_t ** ou
   if(object_kind(args) != EMFRP_OBJECT_TUPLE1)
     return EM_RESULT_INVALID_ARGUMENT;
   object_t * t = args->value.tuple1.i0;
+  if(!object_is_pointer(t) || t == nullptr) return EM_RESULT_TYPE_MISMATCH;
   switch(object_kind(t))  {
   case EMFRP_OBJECT_TUPLE1:
     if(!exec_equal(t->value.tuple1.tag, tag))
