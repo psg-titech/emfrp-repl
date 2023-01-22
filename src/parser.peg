@@ -77,7 +77,8 @@ record_definition <- _ 'record' __ r:identifier _ '(' _ ds:identifiers _ ')' _ E
 identifiers <- i:identifier ',' _ is:identifiers { $$ = parser_identifiers_prepend(i, is); }
              / i:identifier                      { $$ = parser_identifiers_prepend(i, nullptr); }
 
-deconstructor <- i:identifier                               { $$ = parser_deconstructor_new_identifier(i); }
+deconstructor <- i:identifier _ '(' _ ds:deconstructors _ ')' { $$ = parser_deconstructor_new_tuple(i, ds); }
+                 / i:identifier                               { $$ = parser_deconstructor_new_identifier(i); }
                  / '(' _ ds:deconstructors _ ')'              { $$ = parser_deconstructor_new_tuple(nullptr, ds); }
 
 deconstructors <- d:deconstructor (_ ',' _ ds:deconstructors)? { $$ = parser_deconstructors_prepend(d, ds); }
