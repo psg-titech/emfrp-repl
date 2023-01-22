@@ -235,7 +235,7 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   variable_table_t * prev_vt = nullptr;
   CHKERR2(err_state, machine_get_stack_state(m, &state));
   CHKERR(exec_ast(m, v->value.funccall.callee, &callee));
-  if(!object_is_pointer(callee) || callee != nullptr || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
+  if(!object_is_pointer(callee) || callee == nullptr || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
     return EM_RESULT_TYPE_MISMATCH;
   CHKERR(machine_push(m, callee));
   if(v->value.funccall.arguments.value != nullptr) {
