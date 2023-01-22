@@ -241,7 +241,7 @@ check_dependencies(machine_t * self, parser_expression_t * prog, list_t ** execu
     list_t ** p = &dependencies;
     while(!LIST_IS_EMPTY(&cur)) {
       object_t * _;
-      if(variable_table_lookup(machine_get_variable_table(self), &_, (string_t *)(dependencies->value))) {
+      if(variable_table_lookup(machine_get_variable_table(self), &_, (string_t *)(cur->value))) {
 	*p = cur->next;
 	em_free(cur);
 	cur = *p;
