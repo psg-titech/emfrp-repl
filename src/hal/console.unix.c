@@ -11,7 +11,6 @@ initialize_console(void) {
 em_result
 read_line(string_t * recycle_buffer) {
   char * line;
-  string_free(recycle_buffer); // free it!
   line = readline("emfrp: ");
   if (line == nullptr) // It is failure.
     return EM_RESULT_UNKNOWN_ERR;
