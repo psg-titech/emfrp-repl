@@ -85,14 +85,20 @@ deconstructors <- d:deconstructor (_ ',' _ ds:deconstructors)? { $$ = parser_dec
 #             / d:deconstructor { $$ = parser_deconstructors_prepend(d, nullptr); }
 
 empty_or_deconstructors <- ds:deconstructors { $$ = ds; }
-                         / _ { $$ = nullptr; }
+                         / _ { $$ = nullptr; } 
 
 expression <-  v:term __ 'of' _ ':' _ bs:branches { $$ = parser_expression_new_case(v, bs); }
              / 'if' _ con:expression _ 'then' _ the:term _ 'else' _ els:expression { $$ = parser_expression_new_if(con, the, els); }
+	     / '{' _ es:expressions _ '}' { $$ = parser_expression_new_begin(es);}
              / t:term { $$ = t; }
 
+expressions <- em:expressions_mono _ EOL _ es:expressions { $$ = parser_expression_branch_prepend(em, es); }
+             / em:expressions_mono  _ EOL? { $$ = em; }
+expressions_mono <- d:deconstructor _ '<-' _ e:expression { $$ = parser_expression_branch_new(d, e); }
+                  / e:expression { $$ = parser_expression_branch_new(nullptr, e); }
+
 branches <- b:branch _ ',' _ bs:branches { $$ = parser_expression_branch_prepend(b, bs); }
-          / b:branch                 { $$ = b; }
+          / b:branch                { $$ = b; }
 branch <- cd:case_deconstructor _ '->' _ e:expression { $$ = parser_expression_branch_new(cd, e); }
 
 case_deconstructor <- i:identifier _ '(' _ cd:case_deconstructors _ ')' { $$ = parser_deconstructor_new_tuple(i, cd); }
@@ -142,8 +148,8 @@ unary <- '+' _ e:unary
 
 function <- 'func' _ '(' _ ds:empty_or_deconstructors _ ')' _ '->' _ e:expression { $$ = parser_expression_new_function(ds, e); }
 
-function_call <- ex:expression _ '(' _ ')' { $$ = parser_expression_new_function_call(ex, nullptr); }
-               / ex:expression _ '(' _ t:tuple_inner _ ')' { $$ = parser_expression_new_function_call(ex, t); }
+function_call <- ex:primary _ '(' _ ')' { $$ = parser_expression_new_function_call(ex, nullptr); }
+               / ex:primary _ '(' _ t:tuple_inner _ ')' { $$ = parser_expression_new_function_call(ex, t); }
 
 primary <- i:integer                 { $$ = i; }
          / '(' _ e:expression _ ')'  { $$ = e; }

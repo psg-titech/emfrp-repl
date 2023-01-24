@@ -210,6 +210,10 @@ typedef struct parser_expression_t {
       // -> ...
       struct parser_branch_list_t * branches;
     } caseof;
+    // ! When kind is EXPR_KIND_BEGIN
+    struct {
+      struct parser_branch_list_t * branches;
+    } begin;
   } value;
 } parser_expression_t;
 
@@ -742,6 +746,16 @@ parser_expression_new_case(parser_expression_t * v, parser_branch_list_t * branc
   ret->kind = EXPR_KIND_CASE;
   ret->value.caseof.of = v;
   ret->value.caseof.branches = branches;
+  return ret;
+}
+
+static inline parser_expression_t *
+parser_expression_new_begin(parser_branch_list_t * branches) {
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
+  ret->kind = EXPR_KIND_BEGIN;
+  ret->value.begin.branches = branches;
   return ret;
 }
 

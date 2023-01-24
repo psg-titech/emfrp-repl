@@ -291,6 +291,29 @@ parser_expression_print(parser_expression_t * e) {
 	}
 	break;
       }
+    case EXPR_KIND_BEGIN:
+      printf(" { ");
+      {
+	parser_branch_list_t * bl = e->value.begin.branches;
+	if(bl == nullptr) break;
+	if(bl->deconstruct != nullptr) {
+	  go_deconstructor_print(bl->deconstruct);
+	  printf(" <- ");
+	}
+	parser_expression_print(bl->body);
+	bl = bl->next;
+	while(bl != nullptr) {
+	  printf("; ");
+	  if(bl->deconstruct != nullptr) {
+	    go_deconstructor_print(bl->deconstruct);
+	    printf(" <- ");
+	  }
+	  parser_expression_print(bl->body);
+	  bl = bl->next;
+	}
+	printf(" } ");
+	break;
+      }
     case EXPR_KIND_TUPLE:
       printf("(");
       parser_expression_tuple_list_t * tl = &(e->value.tuple);
@@ -351,9 +374,21 @@ parser_expression_free(parser_expression_t * expr) {
       break;
     case EXPR_KIND_CASE:
       parser_expression_free(expr->value.caseof.of);
-      for(parser_branch_list_t * bl = expr->value.caseof.branches; bl != nullptr; bl = bl->next) {
+      for(parser_branch_list_t * bl = expr->value.caseof.branches; bl != nullptr;) {
 	deconstructor_free_deep(bl->deconstruct);
 	parser_expression_free(bl->body);
+	parser_branch_list_t * prev = bl;
+	bl = bl->next;
+	em_free(prev);
+      }
+      break;
+    case EXPR_KIND_BEGIN:
+      for(parser_branch_list_t * bl = expr->value.begin.branches; bl != nullptr;) {
+	if(bl->deconstruct != nullptr) deconstructor_free_deep(bl->deconstruct);
+	parser_expression_free(bl->body);
+	parser_branch_list_t * prev = bl;
+	bl = bl->next;
+	em_free(prev);
       }
       break;
     case EXPR_KIND_TUPLE: {

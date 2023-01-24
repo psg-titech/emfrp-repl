@@ -338,6 +338,38 @@ exec_caseof(machine_t * m, object_t * v, parser_branch_list_t * bl, object_t ** 
 }
 
 em_result
+exec_begin(machine_t * m, parser_branch_list_t * bl, object_t ** out) {
+  em_result errres = EM_RESULT_OK;
+  object_t * o = nullptr;
+  bool isVariableTableCreated = false;
+  for(;bl != nullptr; bl = bl->next) {
+    CHKERR(exec_ast(m, bl->body, &o));
+    if(bl->deconstruct != nullptr) {
+      CHKERR(machine_new_variable_table(m));
+      goto assign;
+    }
+  }
+  goto err;
+  for(; bl != nullptr; bl = bl->next) {
+    CHKERR(exec_ast(m, bl->body, &o));
+    if(bl->deconstruct != nullptr) {
+    assign:
+      switch(bl->deconstruct->kind) {
+      case DECONSTRUCTOR_IDENTIFIER:
+	CHKERR(machine_assign_variable(m, bl->deconstruct->value.identifier, o));
+      case DECONSTRUCTOR_ANY: break;
+      case DECONSTRUCTOR_TUPLE:
+	CHKERR(machine_assign_variable_tuple(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, o));
+	break;
+      default:DEBUGBREAK; break;
+      }
+    }
+  }
+  machine_pop_variable_table(m);
+ err: *out = o; return errres;
+}
+
+em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
   node_t * id;
@@ -374,6 +406,7 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       machine_restore_stack_state(m, state);
       break;
     }
+    case EXPR_KIND_BEGIN: CHKERR(exec_begin(m, v->value.begin.branches, out)); break;
     case EXPR_KIND_LAST_IDENTIFIER:
       if(!machine_lookup_node(m, &id, &(v->value.identifier)))
         return EM_RESULT_MISSING_IDENTIFIER;
