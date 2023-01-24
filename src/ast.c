@@ -344,7 +344,7 @@ parser_expression_print(parser_expression_t * e) {
       break;
     case EXPR_KIND_FUNCTION: {
       printf("(fun");
-      go_deconstructor_print(e->value.function.arguments);
+      go_deconstructor_list_print(e->value.function.arguments);
       printf(" -> (");
       parser_expression_print(e->value.function.body);
       printf("))");
