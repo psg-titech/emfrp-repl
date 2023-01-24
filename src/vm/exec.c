@@ -295,6 +295,49 @@ exec_func(machine_t * m, parser_expression_t * v, object_t ** out) {
 }
 
 em_result
+exec_caseof(machine_t * m, object_t * v, parser_branch_list_t * bl, object_t ** out) {
+  while(bl != nullptr) {
+    bool isOk = false;
+    switch(bl->deconstruct->kind) {
+    case DECONSTRUCTOR_IDENTIFIER:
+    case DECONSTRUCTOR_ANY: isOk = true; break;
+    case DECONSTRUCTOR_TUPLE:
+      isOk = machine_match_test(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v) == EM_RESULT_OK;
+      break;
+    case DECONSTRUCTOR_INTEGER:
+      isOk = (object_is_integer(v) && bl->deconstruct->value.integer == object_get_integer(v));
+      break;
+#if EMFRP_ENABLE_FLOATING
+    case DECONSTRUCTOR_FLOAT: break;
+#endif
+    default:DEBUGBREAK; break;
+    }
+    if(isOk) {
+      em_result errres = EM_RESULT_OK;
+      bool isVariableTableCreated  = false;
+      if((machine_get_variable_table(m)) == nullptr
+	 || (machine_get_variable_table(m))->parent == nullptr) {
+	isVariableTableCreated = true;
+	CHKERR2(err2, machine_new_variable_table(m));
+      }
+      if(bl->deconstruct->kind == DECONSTRUCTOR_TUPLE) {
+	CHKERR(machine_assign_variable_tuple(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v));
+      } else if(bl->deconstruct->kind == DECONSTRUCTOR_IDENTIFIER)
+	CHKERR(machine_assign_variable(m, bl->deconstruct->value.identifier, v));
+      CHKERR(exec_ast(m, bl->body, out));
+    err:
+      if(isVariableTableCreated)
+	machine_pop_variable_table(m);
+    err2:
+      return errres;
+    }
+    bl = bl->next;
+  }
+  if(bl == nullptr) *out = nullptr;
+  return EM_RESULT_OK;
+}
+
+em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
   node_t * id;
@@ -307,6 +350,10 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
     return exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out);
   else {
     switch(v->kind) {
+    case EXPR_KIND_IDENTIFIER:
+      if(!machine_lookup_variable(m, out, &(v->value.identifier)))        
+        return EM_RESULT_MISSING_IDENTIFIER;
+      break;
     case EXPR_KIND_IF: {
       object_t * cond_result = nullptr;
       bool cond_v;
@@ -314,14 +361,19 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
       CHKERR(exec_ast(m, v->value.ifthenelse.cond, &cond_result));
       CHKERR(machine_push(m, cond_result));
       cond_v = cond_result == &object_true;
-      machine_restore_stack_state(m, state);
       CHKERR(exec_ast(m, cond_v ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
+      machine_restore_stack_state(m, state);
       break;
     }
-    case EXPR_KIND_IDENTIFIER:
-      if(!machine_lookup_variable(m, out, &(v->value.identifier)))        
-        return EM_RESULT_MISSING_IDENTIFIER;
+    case EXPR_KIND_CASE: {
+      object_t * v_result = nullptr;
+      CHKERR2(err_state, machine_get_stack_state(m, &state));
+      CHKERR(exec_ast(m, v->value.caseof.of, &v_result));
+      CHKERR(machine_push(m, v_result));
+      CHKERR(exec_caseof(m, v_result, v->value.caseof.branches, out));
+      machine_restore_stack_state(m, state);
       break;
+    }
     case EXPR_KIND_LAST_IDENTIFIER:
       if(!machine_lookup_node(m, &id, &(v->value.identifier)))
         return EM_RESULT_MISSING_IDENTIFIER;

@@ -141,18 +141,21 @@ parser_node_free_deep(parser_node_t * pn) {
 }
 
 void
-go_deconstructor_print(list_t /*<deconstructor_t>*/ * li) {
-  if(li == nullptr) return;
-  printf("(");
-  deconstructor_t * dt = (deconstructor_t *)(&(li->value));
+go_deconstructor_list_print(list_t /*<deconstructor_t>*/ * li);
+
+void
+go_deconstructor_print(deconstructor_t * dt) {
   switch(dt->kind) {
+  case DECONSTRUCTOR_ANY:
+    printf("_");
+    break;
   case DECONSTRUCTOR_IDENTIFIER:
     printf("%s", dt->value.identifier->buffer);
     break;
   case DECONSTRUCTOR_TUPLE:
     if(dt->value.tuple.tag != nullptr)
       printf("%s ", dt->value.tuple.tag->buffer);
-    go_deconstructor_print(dt->value.tuple.data);
+    go_deconstructor_list_print(dt->value.tuple.data);
     break;
   case DECONSTRUCTOR_INTEGER:
     printf("%d", dt->value.integer);
@@ -162,29 +165,18 @@ go_deconstructor_print(list_t /*<deconstructor_t>*/ * li) {
     printf("%lf", dt->value.floating);
     break;
 #endif
+  default: DEBUGBREAK; break;
   }
+}
+
+void
+go_deconstructor_list_print(list_t /*<deconstructor_t>*/ * li) {
+  if(li == nullptr) return;
+  printf("(");
+  go_deconstructor_print((deconstructor_t *)(&(li->value)));
   for(li = LIST_NEXT(li); li != nullptr; li = LIST_NEXT(li)) {
     printf(", ");
-    dt = (deconstructor_t *)(&(li->value));
-    
-    switch(dt->kind) {
-    case DECONSTRUCTOR_IDENTIFIER:
-      printf("%s", dt->value.identifier->buffer);
-      break;
-    case DECONSTRUCTOR_TUPLE:
-      if(dt->value.tuple.tag != nullptr)
-	printf("%s ", dt->value.tuple.tag->buffer);
-      go_deconstructor_print(dt->value.tuple.data);
-    break;
-    case DECONSTRUCTOR_INTEGER:
-      printf("%d", dt->value.integer);
-      break;
-#if EMFRP_ENABLE_FLOATING
-    case DECONSTRUCTOR_FLOATING:
-      printf("%lf", dt->value.floating);
-      break;
-#endif
-    }
+    go_deconstructor_print((deconstructor_t *)(&(li->value)));
   }
   printf(")");
 }
@@ -203,41 +195,33 @@ parser_toplevel_print(parser_toplevel_t * t) {
 
 void
 parser_node_print(parser_node_t * n) {
-  switch(n->name.kind) {
-  case DECONSTRUCTOR_IDENTIFIER:
-    printf("node %s = ", n->name.value.identifier->buffer);
-    break;
-  case DECONSTRUCTOR_TUPLE:
-    printf("node ");
-    go_deconstructor_print(n->name.value.tuple.data);
-    printf(" = ");
-    break;
-  default: DEBUGBREAK; break;
+  printf("node ");
+  go_deconstructor_print(&(n->name));
+  if(n->init_expression != nullptr) {
+    printf(" init[");
+    parser_expression_print(n->init_expression);
+    printf("]");
   }
+  if(n->as != nullptr) {
+    printf(" as %s", n->as->buffer);
+  }
+  printf(" = ");
   parser_expression_print(n->expression);
   printf("\n");
 }
 
 void
 parser_data_print(parser_data_t * d) {
-  switch(d->name.kind) {
-  case DECONSTRUCTOR_IDENTIFIER:
-    printf("data %s = ", d->name.value.identifier->buffer);
-    break;
-  case DECONSTRUCTOR_TUPLE:
-    printf("data ");
-    go_deconstructor_print(d->name.value.tuple.data);
-    printf(" = ");
-    break;
-  default: DEBUGBREAK; break;
-  }
+  printf("data ");
+  go_deconstructor_print(&(d->name));
+  printf(" = ");
   parser_expression_print(d->expression);
 }
 
 void
 parser_function_print(parser_func_t * f) {
   printf("func %s", f->name->buffer);
-  go_deconstructor_print(f->arguments);
+  go_deconstructor_list_print(f->arguments);
   printf(" = ");
   parser_expression_print(f->expression);
 }
@@ -288,6 +272,25 @@ parser_expression_print(parser_expression_t * e) {
       printf(" else ");
       parser_expression_print(e->value.ifthenelse.otherwise);
       break;
+    case EXPR_KIND_CASE:
+      parser_expression_print(e->value.caseof.of);
+      printf(": ");
+      {
+	parser_branch_list_t * bl = e->value.caseof.branches;
+	if(bl == nullptr) break;
+	go_deconstructor_print(bl->deconstruct);
+	printf(" -> ");
+	parser_expression_print(bl->body);
+	bl = bl->next;
+	while(bl != nullptr) {
+	  printf(", ");
+	  go_deconstructor_print(bl->deconstruct);
+	  printf(" -> ");
+	  parser_expression_print(bl->body);
+	  bl = bl->next;
+	}
+	break;
+      }
     case EXPR_KIND_TUPLE:
       printf("(");
       parser_expression_tuple_list_t * tl = &(e->value.tuple);
@@ -345,6 +348,13 @@ parser_expression_free(parser_expression_t * expr) {
       parser_expression_free(expr->value.ifthenelse.cond);
       parser_expression_free(expr->value.ifthenelse.then);
       parser_expression_free(expr->value.ifthenelse.otherwise);
+      break;
+    case EXPR_KIND_CASE:
+      parser_expression_free(expr->value.caseof.of);
+      for(parser_branch_list_t * bl = expr->value.caseof.branches; bl != nullptr; bl = bl->next) {
+	deconstructor_free_deep(bl->deconstruct);
+	parser_expression_free(bl->body);
+      }
       break;
     case EXPR_KIND_TUPLE: {
       parser_expression_tuple_list_t * tl = &expr->value.tuple;

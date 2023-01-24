@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/1/24
  ------------------------------------------- */
 
 #pragma once
@@ -195,6 +195,15 @@ machine_assign_variable(machine_t * self, string_t * name, struct object_t * val
  * \return The result
  */
 em_result machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
+
+// ! Match the values to the deconstructor.
+/* !
+ * \param self The machine
+ * \param nt The deconstructor
+ * \param v The tuple object
+ * \return The result
+ */
+em_result machine_match_test(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
 
 // ! Lookup a value of the variable.
 /* !

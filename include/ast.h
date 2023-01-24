@@ -25,6 +25,12 @@ typedef struct parser_expression_tuple_list_t {
   struct parser_expression_tuple_list_t * next;
 } parser_expression_tuple_list_t;
 
+typedef struct parser_branch_list_t {
+  struct deconstructor_t * deconstruct;
+  struct parser_expression_t * body;
+  struct parser_branch_list_t * next;
+} parser_branch_list_t;
+
 #define PARSER_EXPRESSION_KIND_SHIFT 3
 
 // ! kind enum type of parser expression.
@@ -92,6 +98,10 @@ typedef enum parser_expression_kind_t : int32_t {
   EXPR_KIND_FUNCCALL = 6 << PARSER_EXPRESSION_KIND_SHIFT,
   // ! Function
   EXPR_KIND_FUNCTION = 7 << PARSER_EXPRESSION_KIND_SHIFT,
+  // ! { ..; ..; }
+  EXPR_KIND_BEGIN = 8 << PARSER_EXPRESSION_KIND_SHIFT,
+  // ! .. of:
+  EXPR_KIND_CASE = 9 << PARSER_EXPRESSION_KIND_SHIFT,
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
@@ -111,6 +121,8 @@ typedef enum parser_expression_kind_t : int32_t {
 typedef enum deconstructor_kind {
   // ! Identifier
   DECONSTRUCTOR_IDENTIFIER,
+  // ! Any
+  DECONSTRUCTOR_ANY,
   // ! Tuple
   DECONSTRUCTOR_TUPLE,
   // ! Integer
@@ -191,6 +203,13 @@ typedef struct parser_expression_t {
       // ! Body
       struct parser_expression_t * body;
     } function;
+    // ! When kind is EXPR_KIND_CASE
+    struct {
+      // ... of:
+      struct parser_expression_t * of;
+      // -> ...
+      struct parser_branch_list_t * branches;
+    } caseof;
   } value;
 } parser_expression_t;
 
@@ -490,6 +509,16 @@ parser_deconstructor_new_tuple(string_t * tag, list_t /*<deconstructor_t>*/ * li
   return v;
 }
 
+static inline deconstructor_t *
+parser_deconstructor_new_integer(int i) {
+  deconstructor_t * v;
+  if(em_malloc((void **)&v, sizeof(deconstructor_t)))
+    return nullptr;
+  v->kind = DECONSTRUCTOR_INTEGER;
+  v->value.integer = i;
+  return v;
+}
+
 static inline list_t /*<deconstructor_t>*/ *
 parser_deconstructors_prepend(deconstructor_t * head,
 			    list_t /*<deconstructor_t>*/ * tail) {
@@ -505,6 +534,23 @@ parser_identifiers_prepend(string_t * str,
   if(list_add2(&tail, string_t, str)) return nullptr;
   em_free(str);
   return tail;
+}
+
+static inline parser_branch_list_t *
+parser_expression_branch_new(deconstructor_t * decon, parser_expression_t * body) {
+  parser_branch_list_t * v;
+  if(em_malloc((void **)&v, sizeof(parser_branch_list_t)))
+    return nullptr;
+  v->deconstruct = decon;
+  v->body = body;
+  v->next = nullptr;
+  return v;
+}
+
+static inline parser_branch_list_t *
+parser_expression_branch_prepend(parser_branch_list_t * bt, parser_branch_list_t * next) {
+  bt->next = next;
+  return bt;
 }
 
 // ! Constructor of binary expression.
@@ -685,6 +731,17 @@ parser_expression_new_function_call(parser_expression_t * callee, parser_express
   } else
     ret->value.funccall.arguments = arguments->value.tuple;
   em_free(arguments);
+  return ret;
+}
+
+static inline parser_expression_t *
+parser_expression_new_case(parser_expression_t * v, parser_branch_list_t * branches) {
+  parser_expression_t * ret = nullptr;
+  if(em_malloc((void **)&ret, sizeof(parser_expression_t)))
+    return nullptr;
+  ret->kind = EXPR_KIND_CASE;
+  ret->value.caseof.of = v;
+  ret->value.caseof.branches = branches;
   return ret;
 }
 

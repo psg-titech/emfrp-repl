@@ -87,8 +87,20 @@ deconstructors <- d:deconstructor (_ ',' _ ds:deconstructors)? { $$ = parser_dec
 empty_or_deconstructors <- ds:deconstructors { $$ = ds; }
                          / _ { $$ = nullptr; }
 
-expression <- 'if' _ con:expression _ 'then' _ the:term _ 'else' _ els:expression { $$ = parser_expression_new_if(con, the, els); }
+expression <-  v:term __ 'of' _ ':' _ bs:branches { $$ = parser_expression_new_case(v, bs); }
+             / 'if' _ con:expression _ 'then' _ the:term _ 'else' _ els:expression { $$ = parser_expression_new_if(con, the, els); }
              / t:term { $$ = t; }
+
+branches <- b:branch _ ',' _ bs:branches { $$ = parser_expression_branch_prepend(b, bs); }
+          / b:branch                 { $$ = b; }
+branch <- cd:case_deconstructor _ '->' _ e:expression { $$ = parser_expression_branch_new(cd, e); }
+
+case_deconstructor <- i:identifier _ '(' _ cd:case_deconstructors _ ')' { $$ = parser_deconstructor_new_tuple(i, cd); }
+                 / i:integer                                  { $$ = parser_deconstructor_new_integer(((int)(size_t)i) >> 2); }
+                 / i:identifier                               { $$ = parser_deconstructor_new_identifier(i); }
+                 / '(' _ cd:deconstructors _ ')'              { $$ = parser_deconstructor_new_tuple(nullptr, cd); }
+
+case_deconstructors <- cd:case_deconstructor (_ ',' _ cds:case_deconstructors)? { $$ = parser_deconstructors_prepend(cd, cds); }
 
 term <- l:logical { $$ = l; }
 logical <- l:logical _ '&&' _ r:bitwise { $$ = parser_expression_new_dand(l, r); }
@@ -133,10 +145,7 @@ function <- 'func' _ '(' _ ds:empty_or_deconstructors _ ')' _ '->' _ e:expressio
 function_call <- ex:expression _ '(' _ ')' { $$ = parser_expression_new_function_call(ex, nullptr); }
                / ex:expression _ '(' _ t:tuple_inner _ ')' { $$ = parser_expression_new_function_call(ex, t); }
 
-primary <- '0'                       { $$ = parser_expression_new_integer(0); }
-         / <[1-9][0-9]*>             { $$ = parser_expression_new_integer(atoi($1)); }
-         / '0x' <[0-9]+>             { $$ = parser_expression_new_integer(strtol($2, NULL, 16)); }
-         / '0' <[0-9]+>              { $$ = parser_expression_new_integer(strtol($3, NULL, 8)); }
+primary <- i:integer                 { $$ = i; }
          / '(' _ e:expression _ ')'  { $$ = e; }
          / '(' _ vs:tuple_inner _ ')'{ $$ = vs; }
          / 'True'                    { $$ = parser_expression_true(); }
@@ -147,6 +156,11 @@ primary <- '0'                       { $$ = parser_expression_new_integer(0); }
          / fc:function_call          { $$ = fc; }
          / ident:lastidentifier      { $$ = parser_expression_new_last_identifier(ident); }
          / ident:identifier          { $$ = parser_expression_new_identifier(ident); }
+
+integer <- '0'                       { $$ = parser_expression_new_integer(0); }
+         / <[1-9][0-9]*>             { $$ = parser_expression_new_integer(atoi($1)); }
+         / '0x' <[0-9]+>             { $$ = parser_expression_new_integer(strtol($2, NULL, 16)); }
+         / '0' <[0-9]+>              { $$ = parser_expression_new_integer(strtol($3, NULL, 8)); }
 
 tuple_inner <- e:expression _ ',' _ vs:tuple_inner { $$ = parser_expression_tuple_prepend(vs, e); }
              / e:expression { $$ = parser_expression_new_tuple(e); }
