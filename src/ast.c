@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/18
+ * @date   2023/1/24
  ------------------------------------------- */
 
 #include "ast.h"
@@ -257,7 +257,11 @@ parser_record_print(parser_record_t * r) {
 void
 parser_expression_print(parser_expression_t * e) {
   if(EXPR_KIND_IS_INTEGER(e))
-    printf("%d", (int)e>>1);
+    printf("%d", ((int)(size_t)e)>>2);
+#if EMFRP_ENABLE_FLOATING
+  else if(EXPR_KIND_IS_FLOAT(e))
+    printf("%f", uninline_float(e));
+#endif
   else if(EXPR_KIND_IS_BOOLEAN(e))
     printf(EXPR_IS_TRUE(e) ? "true" : "false");
   else if((e->kind & 1) == 1) {
@@ -327,8 +331,7 @@ parser_expression_print(parser_expression_t * e) {
 
 void
 parser_expression_free(parser_expression_t * expr) {
-  if(EXPR_KIND_IS_INTEGER(expr)) return; // It is integer-typed.
-  if(EXPR_KIND_IS_BOOLEAN(expr)) return; // It is boolean-typed.
+  if(!EXPR_IS_POINTER(expr)) return; // It is not pointer.
   if(expr == nullptr) return;
   if(EXPR_KIND_IS_BIN_OP(expr)) {
     parser_expression_free(expr->value.binary.lhs);

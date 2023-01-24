@@ -2,7 +2,7 @@
  * @file   ast.h
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/18
+ * @date   2023/1/24
  ------------------------------------------- */
 
 #pragma once
@@ -10,6 +10,9 @@
 #include "string_t.h"
 #include <stdint.h>
 #include "collections/list_t.h"
+#if EMFRP_ENABLE_FLOATING
+#include "hal/float.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,13 +95,17 @@ typedef enum parser_expression_kind_t : int32_t {
 } parser_expression_kind_t;
 
 #define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
-#define EXPR_KIND_IS_INTEGER(expr) (((size_t)(expr) & 0x1) == 1)
-#define EXPR_KIND_IS_BOOLEAN(expr) ((((size_t)(expr)) & ~0x6) == 0)
-#define EXPR_IS_TRUE(expr) ((size_t)(expr) == 0x2)
-#define EXPR_IS_FALSE(expr) ((size_t)(expr) == 0x6)
+#define EXPR_IS_POINTER(expr) (((size_t)(expr) & 0x3) == 0)
+#define EXPR_KIND_IS_INTEGER(expr) (((size_t)(expr) & 0x3) == 1)
+#if EMFRP_ENABLE_FLOATING
+#define EXPR_KIND_IS_FLOATING(expr) (((size_t)(expr) & 0x3) == 2)
+#endif
+#define EXPR_KIND_IS_BOOLEAN(expr) ((((size_t)(expr)) & 0x3) == 3)
+#define EXPR_IS_TRUE(expr) ((size_t)(expr) == 0x7)
+#define EXPR_IS_FALSE(expr) ((size_t)(expr) == 0xB)
 
-#define parser_expression_true() (parser_expression_t *)0x2;
-#define parser_expression_false() (parser_expression_t *)0x6;
+#define parser_expression_true() (parser_expression_t *)0x7;
+#define parser_expression_false() (parser_expression_t *)0xB;
 
 // ! Kind of deconstructor
 typedef enum deconstructor_kind {
@@ -559,8 +566,15 @@ parser_expression_new_if(parser_expression_t * cond, parser_expression_t * then,
  */
 static inline parser_expression_t *
 parser_expression_new_integer(int num) {
-  return (parser_expression_t *)(int)((num << 1) | 0x1);
+  return (parser_expression_t *)(size_t)((num << 2) | 0x1);
 }
+
+#if EMFRP_ENABLE_FLOATING
+static inline parser_expression_t *
+parser_expression_new_float(float f) {
+  return (parser_expression_t *)(size_t)(inline_float(f) | 0x2);
+}
+#endif
 
 // ! Constructor of indentifier expression.
 /* !

@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/9
+ * @date   2023/1/24
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -300,7 +300,7 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   node_t * id;
   stack_state_t state;
   if (EXPR_KIND_IS_INTEGER(v)) {
-    CHKERR2(err_state, object_new_int(out, (int32_t)((size_t)v >> 1)));
+    CHKERR2(err_state, object_new_int(out, (int)((size_t)v >> 2)));
   } else if (EXPR_KIND_IS_BOOLEAN(v))
     *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
   else if (EXPR_KIND_IS_BIN_OP(v))
