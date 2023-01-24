@@ -94,7 +94,7 @@ expression <-  v:term __ 'of' _ ':' _ bs:branches { $$ = parser_expression_new_c
 
 expressions <- em:expressions_mono _ EOL _ es:expressions { $$ = parser_expression_branch_prepend(em, es); }
              / em:expressions_mono  _ EOL? { $$ = em; }
-expressions_mono <- d:deconstructor _ '<-' _ e:expression { $$ = parser_expression_branch_new(d, e); }
+expressions_mono <- d:deconstructor _ '=' _ e:expression { $$ = parser_expression_branch_new(d, e); }
                   / e:expression { $$ = parser_expression_branch_new(nullptr, e); }
 
 branches <- b:branch _ ',' _ bs:branches { $$ = parser_expression_branch_prepend(b, bs); }
@@ -118,7 +118,7 @@ bitwise <- l:bitwise _ '&' _ r:comp { $$ = parser_expression_new_and(l, r); }
 	 / l:bitwise _ '^' _ r:comp { $$ = parser_expression_new_xor(l, r); }
 	 / c:comp { $$ = c; }
 
-comp <- l:comp _ '='  _ r:comp2 { $$ = parser_expression_new_equal           (l, r); }
+comp <- l:comp _ '=='  _ r:comp2 { $$ = parser_expression_new_equal           (l, r); }
       / l:comp _ '!=' _ r:comp2 { $$ = parser_expression_new_not_equal       (l, r); }
       / c:comp2 { $$ = c; }
       
