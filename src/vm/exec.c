@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/24
+ * @date   2023/1/25
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -230,7 +230,7 @@ em_result
 exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
   object_t * callee = nullptr;
   object_t * args = nullptr;
-  stack_state_t state;
+  stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
   em_result errres = EM_RESULT_OK;
   variable_table_t * prev_vt = nullptr;
   CHKERR2(err_state, machine_get_stack_state(m, &state));
@@ -373,7 +373,7 @@ em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   em_result errres;
   node_t * id;
-  stack_state_t state;
+  stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
   if (EXPR_KIND_IS_INTEGER(v)) {
     CHKERR2(err_state, object_new_int(out, (int)((size_t)v >> 2)));
   } else if (EXPR_KIND_IS_BOOLEAN(v))

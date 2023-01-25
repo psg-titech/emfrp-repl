@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/24
+ * @date   2023/1/25
  ------------------------------------------- */
 
 #pragma once
@@ -105,6 +105,7 @@ em_result machine_pop(machine_t * self, object_t ** obj);
 
 // ! The stack state for exception handling.
 typedef size_t stack_state_t;
+#define MACHINE_STACK_STATE_DEFAULT 0
 
 // ! Retrive the stack state.
 /* !
