@@ -81,7 +81,7 @@ exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t *
     case EXPR_KIND_XOR: retVal = ll ^ rr; break;
     default: DEBUGBREAK; break;
     }
-    if(kind >= EXPR_KIND_LESS_OR_EQUAL && kind <= EXPR_KIND_GREATER_THAN)
+    if(kind >= EXPR_KIND_LESS_OR_EQUAL && kind <= EXPR_KIND_NOT_EQUAL)
       *out = retVal ? &object_true : &object_false;
     else
       object_new_int(out, retVal);
