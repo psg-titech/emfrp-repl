@@ -2,7 +2,7 @@
  * @file   object_t.h
  * @brief  Emfrp REPL object structure.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/18
+ * @date   2023/2/4
  ------------------------------------------- */
 
 #pragma once
@@ -363,17 +363,20 @@ object_new_variable_table(object_t * out, struct variable_table_t * ptr) {
  * \return The result.
  */
 static inline em_result
+
+// Retrive ith of the given tuple.
+#define object_tuple_ith(obj, ith) (((obj)->value.tupleN.data))[ith]
+
 object_new_stack(object_t * out, size_t cap) {
   em_result errres = EM_RESULT_OK;
   out->kind = EMFRP_OBJECT_STACK | (out->kind & 1);
   CHKERR(em_allocarray((void **)(&(out->value.stack.data)), cap, sizeof(object_t *)));
+  for(int i = 0; i < cap; ++i)
+    object_tuple_ith(out, i) = nullptr;
   CHKERR(object_new_int(&(out->value.stack.capacity), cap));
   out->value.stack.length = 0;
  err: return errres;
 }
-
-// Retrive ith of the given tuple.
-#define object_tuple_ith(obj, ith) (((obj)->value.tupleN.data))[ith]
 
 // ! Printing the object.
 /* !

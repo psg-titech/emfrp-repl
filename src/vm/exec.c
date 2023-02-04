@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/25
+ * @date   2023/2/4
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -219,7 +219,7 @@ exec_access_record(object_t * tag, size_t index, object_t * args, object_t ** ou
     if(!exec_equal(t->value.tupleN.tag, tag))
       return EM_RESULT_TYPE_MISMATCH;
     if(index >= t->value.tupleN.length) return EM_RESULT_TYPE_MISMATCH;
-    *out = t->value.tupleN.data[index];
+    *out = object_tuple_ith(t, index);
     return EM_RESULT_OK;
   default:
     return EM_RESULT_TYPE_MISMATCH;
@@ -371,11 +371,8 @@ exec_begin(machine_t * m, parser_branch_list_t * bl, object_t ** out) {
 
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
-  em_result errres;
-  node_t * id;
-  stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
   if (EXPR_KIND_IS_INTEGER(v)) {
-    CHKERR2(err_state, object_new_int(out, (int)((size_t)v >> 2)));
+    return object_new_int(out, (int)((size_t)v >> 2));
   } else if (EXPR_KIND_IS_BOOLEAN(v))
     *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
   else if (EXPR_KIND_IS_BIN_OP(v))
@@ -383,46 +380,45 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
   else {
     switch(v->kind) {
     case EXPR_KIND_IDENTIFIER:
-      if(!machine_lookup_variable(m, out, &(v->value.identifier)))        
-        return EM_RESULT_MISSING_IDENTIFIER;
-      break;
+      return machine_lookup_variable(m, out, &(v->value.identifier)) ?
+		      EM_RESULT_OK : EM_RESULT_MISSING_IDENTIFIER;
     case EXPR_KIND_IF: {
+      em_result errres = EM_RESULT_OK;
       object_t * cond_result = nullptr;
-      bool cond_v;
-      CHKERR2(err_state, machine_get_stack_state(m, &state));
-      CHKERR(exec_ast(m, v->value.ifthenelse.cond, &cond_result));
-      CHKERR(machine_push(m, cond_result));
-      cond_v = cond_result == &object_true;
-      CHKERR(exec_ast(m, cond_v ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
-      machine_restore_stack_state(m, state);
-      break;
+      stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
+      CHKERR2(err_if2, machine_get_stack_state(m, &state));
+      CHKERR2(err_if2, exec_ast(m, v->value.ifthenelse.cond, &cond_result));
+      CHKERR2(err_if, machine_push(m, cond_result));
+      CHKERR2(err_if, exec_ast(m, cond_result == &object_true ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
+    err_if:  machine_restore_stack_state(m, state);
+    err_if2: return errres;
     }
     case EXPR_KIND_CASE: {
+      em_result errres = EM_RESULT_OK;
       object_t * v_result = nullptr;
-      CHKERR2(err_state, machine_get_stack_state(m, &state));
-      CHKERR(exec_ast(m, v->value.caseof.of, &v_result));
-      CHKERR(machine_push(m, v_result));
-      CHKERR(exec_caseof(m, v_result, v->value.caseof.branches, out));
-      machine_restore_stack_state(m, state);
-      break;
+      stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
+      CHKERR2(err_case2, machine_get_stack_state(m, &state));
+      CHKERR2(err_case2, exec_ast(m, v->value.caseof.of, &v_result));
+      CHKERR2(err_case, machine_push(m, v_result));
+      CHKERR2(err_case, exec_caseof(m, v_result, v->value.caseof.branches, out));
+    err_case: machine_restore_stack_state(m, state);
+    err_case2: return errres;
     }
-    case EXPR_KIND_BEGIN: CHKERR(exec_begin(m, v->value.begin.branches, out)); break;
-    case EXPR_KIND_LAST_IDENTIFIER:
+    case EXPR_KIND_BEGIN: return exec_begin(m, v->value.begin.branches, out); break;
+    case EXPR_KIND_LAST_IDENTIFIER: {
+      node_t * id;
       if(!machine_lookup_node(m, &id, &(v->value.identifier)))
         return EM_RESULT_MISSING_IDENTIFIER;
       *out = id->last;
       break;
-    case EXPR_KIND_TUPLE:
-      return exec_tuple(m, &(v->value.tuple), out);
+    }
+    case EXPR_KIND_TUPLE:    return exec_tuple(m, &(v->value.tuple), out);
     case EXPR_KIND_FUNCCALL: return exec_funccall(m, v, out);
     case EXPR_KIND_FUNCTION: return exec_func(m, v, out);
-    default:
-      return EM_RESULT_INVALID_ARGUMENT;
+    default:                 return EM_RESULT_INVALID_ARGUMENT;
     }
   }
   return EM_RESULT_OK;
- err: machine_restore_stack_state(m, state);
- err_state: return errres;
 }
 
 em_result
