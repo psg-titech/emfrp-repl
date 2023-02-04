@@ -149,7 +149,7 @@ exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) 
     DEBUGBREAK;
     return EM_RESULT_INVALID_ARGUMENT;
   default: {
-    int i; object_t * o;
+    int i; object_t * o = nullptr;
     CHKERR(object_new_tupleN(*out, tuple_len));
     CHKERR(machine_push(m, *out));
     for(i = 0; i < tuple_len; ++i) {

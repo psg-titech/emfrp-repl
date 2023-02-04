@@ -267,6 +267,9 @@ object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
   return EM_RESULT_OK;
 }
 
+// Retrive ith of the given tuple.
+#define object_tuple_ith(obj, ith) (((obj)->value.tupleN.data))[ith]
+
 // ! Construct the new tupleN object.
 /* !
  * \param out The output object **Must be allocated before calling this function.**
@@ -275,10 +278,13 @@ object_new_tuple2(object_t * out, object_t * v0, object_t * v1) {
  */
 static inline em_result
 object_new_tupleN(object_t * out, size_t size) {
+  em_result errres = EM_RESULT_OK;
   out->kind = EMFRP_OBJECT_TUPLEN | (out->kind & 1);
   out->value.tupleN.length = size;
   out->value.tupleN.tag = nullptr;
-  return em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *));
+  CHKERR(em_allocarray((void **)(&(out->value.tupleN.data)), size, sizeof(object_t *)));
+  for(int i = 0; i < size; ++i) object_tuple_ith(out, i) = nullptr;
+ err: return errres;
 }
 
 // ! Construct the new symbol object.
@@ -363,9 +369,6 @@ object_new_variable_table(object_t * out, struct variable_table_t * ptr) {
  * \return The result.
  */
 static inline em_result
-
-// Retrive ith of the given tuple.
-#define object_tuple_ith(obj, ith) (((obj)->value.tupleN.data))[ith]
 
 object_new_stack(object_t * out, size_t cap) {
   em_result errres = EM_RESULT_OK;
