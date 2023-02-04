@@ -48,8 +48,9 @@ read_line(string_t * recycle_buffer) {
         if (hasNewLine) break;
         char_t * newBuf = nullptr;
         CHKERR(em_reallocarray(&newBuf, recycle_buffer->buffer, sizeof(char_t), recycle_buffer->length + ADD_SIZE));
-        buf = recycle_buffer->buffer + recycle_buffer->length;
         recycle_buffer->length += ADD_SIZE;
+        recycle_buffer->buffer = newBuf;
+        buf = newBuf;
         toRead = ADD_SIZE;
     }
     CHKERR(em_reallocarray(&(recycle_buffer->buffer), recycle_buffer->buffer, sizeof(char_t), readed + 1));
