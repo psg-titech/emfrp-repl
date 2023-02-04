@@ -29,6 +29,7 @@ memory_manager_new(memory_manager_t ** out) {
   m->worklist[0] = nullptr;
   m->worklist_top = 0;
   m->state = MEMORY_MANAGER_STATE_IDLE;
+  m->sweeper = MEMORY_MANAGER_HEAP_SIZE;
   return EM_RESULT_OK;
  err:
   return errres;
@@ -164,6 +165,7 @@ memory_manager_gc(struct machine_t * self,
   switch(mm->state) {
   case MEMORY_MANAGER_STATE_IDLE:
     if(mm->remaining <= MEMORY_MANAGER_GC_START_SIZE) {
+      mm->sweeper = 0;
       mm->worklist_top = 0;
       CHKERR(push_worklist(mm, self->stack));
       CHKERR(push_worklist(mm, machine_get_variable_table(self)->this_object_ref));
@@ -207,8 +209,7 @@ memory_manager_alloc(machine_t * self, object_t ** o) {
   *o = self->memory_manager->freelist;
   self->memory_manager->freelist = (*o)->value.free.next;
   (*o)->kind = 0;
-  if(self->memory_manager->state == MEMORY_MANAGER_STATE_SWEEP &&
-     &(self->memory_manager->space[self->memory_manager->sweeper]) <= *o)
+  if(&(self->memory_manager->space[self->memory_manager->sweeper]) <= *o)
     object_mark(*o);
   //printf("allocated: %d\n", ((int)*o - (int)self->memory_manager->space) / sizeof(object_t));
   return EM_RESULT_OK;
