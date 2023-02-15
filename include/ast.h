@@ -31,7 +31,7 @@ typedef struct parser_branch_list_t {
   struct parser_branch_list_t * next;
 } parser_branch_list_t;
 
-#define PARSER_EXPRESSION_KIND_SHIFT 6
+#define PARSER_EXPRESSION_KIND_SHIFT 4
 
 // ! kind enum type of parser expression.
 /* !

@@ -7,6 +7,18 @@
 
 #include "vm/exec.h"
 
+typedef struct exec_result_t {
+  enum { EXEC_RESULT_OBJECT, EXEC_RESULT_EXECUTE_FUNCTION } kind;
+  union {
+    object_t * out;
+    object_t * next_exec_func;
+  } value;
+} exec_result_t;
+
+typedef em_result (*executor)(machine_t * m, parser_expression_t * v, exec_result_t * out);
+
+em_result exec_ast_mono(machine_t * m, parser_expression_t * v, exec_result_t * out);
+
 bool
 exec_equal(object_t * l, object_t * r) {
   bool b = true;
@@ -37,141 +49,172 @@ exec_equal(object_t * l, object_t * r) {
   }
 }
 
+#define BIN_OP_NUM_NUM_NUM_FUNC(func_name, expression) em_result	\
+  func_name(machine_t * m, parser_expression_t * v, exec_result_t * out) { \
+    object_t * lro = nullptr, * rro = nullptr;				\
+    em_result errres = EM_RESULT_OK;					\
+    int ll, rr;								\
+    CHKERR(exec_ast(m, v->value.binary.lhs, &lro));			\
+    if(!object_is_integer(lro)) return EM_RESULT_TYPE_MISMATCH;		\
+    CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
+    if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;		\
+    ll = object_get_integer(lro);					\
+    rr = object_get_integer(rro);					\
+    object_new_int(&(out->value.out), expression);			\
+  err: return errres;							\
+  }
+
+#define BIN_OP_NUM_NUM_BOOL_FUNC(func_name, expression) em_result	\
+  func_name(machine_t * m, parser_expression_t * v, exec_result_t * out) { \
+    object_t * lro = nullptr, * rro = nullptr;				\
+    em_result errres = EM_RESULT_OK;					\
+    int ll, rr;								\
+    CHKERR(exec_ast(m, v->value.binary.lhs, &lro));			\
+    if(!object_is_integer(lro)) return EM_RESULT_TYPE_MISMATCH;		\
+    CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
+    if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;		\
+    ll = object_get_integer(lro);					\
+    rr = object_get_integer(rro);					\
+    out->value.out = (expression) ? &object_true : &object_false;	\
+  err: return errres;							\
+  }
+  
+BIN_OP_NUM_NUM_NUM_FUNC(exec_ast_addition, ll + rr);
+BIN_OP_NUM_NUM_NUM_FUNC(exec_ast_subtract, ll - rr);
+BIN_OP_NUM_NUM_NUM_FUNC(exec_ast_division, ll / rr);
+BIN_OP_NUM_NUM_NUM_FUNC(exec_ast_multiplication, ll * rr);
+BIN_OP_NUM_NUM_NUM_FUNC(exec_ast_modulo, ll % rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_right_shift, ll >> rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_left_shift, ll << rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_less_or_equal, ll <= rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_less_than, ll < rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_greater_or_equal, ll >= rr);
+BIN_OP_NUM_NUM_BOOL_FUNC(exec_ast_greater_than, ll > rr);
+
 em_result
-exec_ast_bin(machine_t * m, parser_expression_kind_t kind, parser_expression_t * l, parser_expression_t * r, object_t ** out) {
+exec_ast_equal(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   object_t * lro = nullptr, * rro = nullptr;
-  bool lro_is_integer, rro_is_integer;
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   stack_state_t state;
+  CHKERR2(err_state, exec_ast(m, v->value.binary.lhs, &lro));
   CHKERR2(err_state, machine_get_stack_state(m, &state));
-  CHKERR(exec_ast(m, l, &lro));
-
-  if(kind == EXPR_KIND_DAND && lro == &object_false) {
-    *out = &object_false;
-    return EM_RESULT_OK;
-  } else if(kind == EXPR_KIND_DOR && lro != &object_false) {
-    *out = lro;
-    return EM_RESULT_OK;
-  }
   CHKERR(machine_push(m, lro));
-  CHKERR(exec_ast(m, r, &rro));
-  lro_is_integer = object_is_integer(lro);
-  rro_is_integer = object_is_integer(rro);
+  CHKERR(exec_ast(m, v->value.binary.rhs, &rro));
   CHKERR2(err_state, machine_restore_stack_state(m, state));
-  if(lro_is_integer && rro_is_integer) {
-    int retVal = 0;
-    int ll = object_get_integer(lro);
-    int rr = object_get_integer(rro);
-    switch(kind) {
-    case EXPR_KIND_ADDITION: retVal = ll + rr; break;
-    case EXPR_KIND_SUBTRACTION: retVal = ll - rr; break;
-    case EXPR_KIND_DIVISION: retVal = ll / rr; break;
-    case EXPR_KIND_MULTIPLICATION: retVal = ll * rr; break;
-    case EXPR_KIND_MODULO: retVal = ll % rr; break;
-    case EXPR_KIND_LEFT_SHIFT: retVal = ll << rr; break;
-    case EXPR_KIND_RIGHT_SHIFT: retVal = ll >> rr; break;
-    case EXPR_KIND_LESS_OR_EQUAL: retVal = ll <= rr; break;
-    case EXPR_KIND_LESS_THAN: retVal = ll < rr; break;
-    case EXPR_KIND_GREATER_OR_EQUAL: retVal = ll >= rr; break;
-    case EXPR_KIND_GREATER_THAN: retVal = ll > rr; break;
-    case EXPR_KIND_EQUAL: retVal = ll == rr; break;
-    case EXPR_KIND_NOT_EQUAL: retVal = ll != rr; break;
-    case EXPR_KIND_AND: retVal = ll & rr; break;
-    case EXPR_KIND_OR: retVal = ll | rr; break;
-    case EXPR_KIND_XOR: retVal = ll ^ rr; break;
-    default: DEBUGBREAK; break;
-    }
-    if(kind >= EXPR_KIND_LESS_OR_EQUAL && kind <= EXPR_KIND_NOT_EQUAL)
-      *out = retVal ? &object_true : &object_false;
-    else
-      object_new_int(out, retVal);
-    return EM_RESULT_OK;
-  } else {
-    switch(kind) {
-    case EXPR_KIND_EQUAL:
-      *out = exec_equal(lro, rro) ? &object_true : &object_false;
-      goto ok;
-    case EXPR_KIND_NOT_EQUAL:
-      *out = exec_equal(lro, rro) ? &object_false : &object_true;
-      goto ok;
-    case EXPR_KIND_AND: case EXPR_KIND_DAND: // Code size than performance.
-      *out = (lro != &object_false) && (rro != &object_false) ? &object_true : &object_false;
-      goto ok;
-    case EXPR_KIND_OR: case EXPR_KIND_DOR: // Code size than performance.
-      *out = (lro != &object_false) || (rro != &object_false) ? &object_true : &object_false;
-      goto ok;
-    case EXPR_KIND_XOR:
-      *out = (lro != &object_false) ^ (rro != &object_false) ? &object_true : &object_false;
-      goto ok;
-    default:
-      return EM_RESULT_TYPE_MISMATCH;
-    }
-  ok:
-    return EM_RESULT_OK;
-  }
-
+  if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;
+  out->value.out = exec_equal(lro, rro) ? &object_true : &object_false;
  err: machine_restore_stack_state(m, state);
- err_state: return errres;
+ err_state: return errres;  
 }
 
 em_result
-exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** out) {
+exec_ast_not_equal(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  object_t * lro = nullptr, * rro = nullptr;
   em_result errres = EM_RESULT_OK;
-  object_t * i0 = nullptr;
-  object_t * i1 = nullptr;
+  stack_state_t state;
+  CHKERR2(err_state, exec_ast(m, v->value.binary.lhs, &lro));
+  CHKERR2(err_state, machine_get_stack_state(m, &state));
+  CHKERR(machine_push(m, lro));
+  CHKERR(exec_ast(m, v->value.binary.rhs, &rro));
+  CHKERR2(err_state, machine_restore_stack_state(m, state));
+  if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;
+  out->value.out = exec_equal(lro, rro) ? &object_false : &object_true;
+ err: machine_restore_stack_state(m, state);
+ err_state: return errres;  
+}
+
+#define BIN_OP_BOOL_BOOL_BOOL_FUNC(func_name, expression) em_result	\
+  func_name(machine_t * m, parser_expression_t * v, exec_result_t * out) { \
+    object_t * lro = nullptr, * rro = nullptr;				\
+    em_result errres = EM_RESULT_OK;					\
+    stack_state_t state;						\
+    CHKERR2(err_state, exec_ast(m, v->value.binary.lhs, &lro));		\
+    CHKERR2(err_state, machine_get_stack_state(m, &state));		\
+    CHKERR(machine_push(m, lro));					\
+    CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
+    CHKERR2(err_state, machine_restore_stack_state(m, state));		\
+    out->value.out = (expression) ? &object_true : &object_false;	\
+  err: machine_restore_stack_state(m, state);				\
+  err_state: return errres;						\
+  }
+
+#define BIN_OP_BOOL_BOOL_BOOL_FUNC2(func_name, expression_short, expression) em_result \
+  func_name(machine_t * m, parser_expression_t * v, exec_result_t * out) { \
+    object_t * lro = nullptr, * rro = nullptr;				\
+    em_result errres = EM_RESULT_OK;					\
+    stack_state_t state;						\
+    CHKERR2(err_state, exec_ast(m, v->value.binary.lhs, &lro));		\
+    if(expression_short) {						\
+      out->value.out = lro;						\
+      return EM_RESULT_OK;						\
+    }									\
+    CHKERR2(err_state, machine_get_stack_state(m, &state));		\
+    CHKERR(machine_push(m, lro));					\
+    CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
+    CHKERR2(err_state, machine_restore_stack_state(m, state));		\
+    out->value.out = (expression) ? &object_true : &object_false;	\
+  err: machine_restore_stack_state(m, state);				\
+  err_state: return errres;						\
+  }
+
+BIN_OP_BOOL_BOOL_BOOL_FUNC(exec_ast_and, (lro != &object_false) && (rro != &object_false));
+BIN_OP_BOOL_BOOL_BOOL_FUNC(exec_ast_or, (lro != &object_false) || (rro != &object_false));
+BIN_OP_BOOL_BOOL_BOOL_FUNC(exec_ast_xor, (lro != &object_false) ^ (rro != &object_false));
+BIN_OP_BOOL_BOOL_BOOL_FUNC2(exec_ast_dand, lro == &object_false, rro != &object_false);
+BIN_OP_BOOL_BOOL_BOOL_FUNC2(exec_ast_dor, lro != &object_false, rro != &object_false);
+
+em_result
+exec_tuple(machine_t * m, parser_expression_tuple_list_t * li, object_t ** o) {
+  em_result errres = EM_RESULT_OK;
   parser_expression_tuple_list_t * lli = li;
   int tuple_len = 1;
   stack_state_t state;
-  CHKERR2(err_state, machine_get_stack_state(m, &state));
   while(lli->next != nullptr) {
     tuple_len++;
     lli = lli->next;
   }
-  *out = nullptr;
-  CHKERR(machine_alloc(m, out));
+  CHKERR2(err_head, machine_alloc(m, o));
   switch(tuple_len) {
-  case 1: {
-    CHKERR(exec_ast(m, li->value, &i0));
+  case 1: case 2: {
+    object_t * i0 = nullptr;
+    CHKERR2(err_state, exec_ast(m, li->value, &i0));
+    if(tuple_len == 1) {
+      CHKERR2(err_state, object_new_tuple1(*o, i0));
+      break;
+    }
+    CHKERR2(err_state, machine_get_stack_state(m, &state));
     CHKERR(machine_push(m, i0));
-    CHKERR(object_new_tuple1(*out, i0));
-    break;
-  }
-  case 2: {
-    CHKERR(exec_ast(m, li->value, &i0));
-    CHKERR(machine_push(m, i0));
+    object_t * i1 = nullptr;
     li = li->next;
     CHKERR(exec_ast(m, li->value, &i1));
-    CHKERR(machine_push(m, i1));
-    CHKERR(object_new_tuple2(*out, i0, i1));
+    CHKERR(object_new_tuple2(*o, i0, i1));
     break;
   }
-  case 0:
-    DEBUGBREAK;
-    return EM_RESULT_INVALID_ARGUMENT;
+  case 0: DEBUGBREAK; errres = EM_RESULT_INVALID_ARGUMENT; goto err;
   default: {
-    int i; object_t * o = nullptr;
-    CHKERR(object_new_tupleN(*out, tuple_len));
-    CHKERR(machine_push(m, *out));
-    for(i = 0; i < tuple_len; ++i) {
-      CHKERR(exec_ast(m, li->value,  &o));
-      object_tuple_ith(*out, i) = o;
-      li = li->next;
+    int i; object_t * cur = nullptr;
+    CHKERR2(err_state, object_new_tupleN(*o, tuple_len));
+    CHKERR2(err_state, machine_get_stack_state(m, &state));
+    CHKERR(machine_push(m, *o));
+    for(i = 0; i < tuple_len; ++i, li = li->next) {
+      CHKERR(exec_ast(m, li->value,  &cur));
+      object_tuple_ith(*o, i) = cur;
     }
-    CHKERR(machine_pop(m, nullptr));
     break;
   }
   }
   CHKERR2(err_state, machine_restore_stack_state(m, state));
   return EM_RESULT_OK;
- err:
-  machine_restore_stack_state(m, state);
-  if(*out != nullptr) {
-    machine_return(m, *out);
-    *out = nullptr;
-  }
-  if(i0 != nullptr) machine_return(m, i0);
-  if(i1 != nullptr) machine_return(m, i1);
- err_state: return errres;
+ err:  machine_restore_stack_state(m, state);
+ err_state: machine_return(m, *o);
+ err_head: *o = nullptr; return errres;
+}
+
+em_result
+exec_ast_tuple(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  object_t ** o = &(out->value.out);
+  parser_expression_tuple_list_t * li = &(v->value.tuple);
+  return exec_tuple(m, li, o);
 }
 
 em_result
@@ -227,12 +270,14 @@ exec_access_record(object_t * tag, size_t index, object_t * args, object_t ** ou
 }
 
 em_result
-exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
+exec_ast_funccall(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   object_t * callee = nullptr;
   object_t * args = nullptr;
   stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
   em_result errres = EM_RESULT_OK;
   variable_table_t * prev_vt = nullptr;
+  object_t ** o = &(out->value.out);
+  *o = nullptr;
   CHKERR2(err_state, machine_get_stack_state(m, &state));
   CHKERR(exec_ast(m, v->value.funccall.callee, &callee));
   if(!object_is_pointer(callee) || callee == nullptr || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
@@ -264,19 +309,19 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
     CHKERR2(err2, machine_push(m, prev_vt->this_object_ref));
     CHKERR2(err2, machine_new_variable_table(m));
     CHKERR2(err2, machine_assign_variable_tuple(m, nullptr, callee->value.function.function.ast.program->value.function.arguments, args));
-    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast.program->value.function.body, out));
+    CHKERR2(err2, exec_ast(m, callee->value.function.function.ast.program->value.function.body, o));
     machine_set_variable_table(m, prev_vt);
     break;
   case EMFRP_PROGRAM_KIND_NOTHING: break;
-  case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(out, args)); break;
+  case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(o, args)); break;
   case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
     CHKERR(exec_construct_record(callee->value.function.function.construct.tag,
 				 callee->value.function.function.construct.arity,
-				 args, out)); break;
+				 args, o)); break;
   case EMFRP_PROGRAM_KIND_RECORD_ACCESS:
     CHKERR(exec_access_record(callee->value.function.function.access.tag,
 			      callee->value.function.function.access.index,
-			      args, out)); break;
+			      args, o)); break;
   default: DEBUGBREAK; break;
   }
   machine_restore_stack_state(m, state);
@@ -287,25 +332,33 @@ exec_funccall(machine_t * m, parser_expression_t * v, object_t ** out) {
 }
 
 em_result
-exec_func(machine_t * m, parser_expression_t * v, object_t ** out) {
+exec_ast_func(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   em_result errres = EM_RESULT_OK;
-  CHKERR(machine_alloc(m, out));
-  return object_new_function_ast(*out, machine_get_variable_table(m)->this_object_ref, v);
+  CHKERR(machine_alloc(m, &(out->value.out)));
+  return object_new_function_ast(out->value.out, machine_get_variable_table(m)->this_object_ref, v);
  err: return errres;
 }
 
 em_result
-exec_caseof(machine_t * m, object_t * v, parser_branch_list_t * bl, object_t ** out) {
+exec_ast_case(machine_t * m, parser_expression_t * v, exec_result_t * o) {
+  em_result errres = EM_RESULT_OK;
+  object_t * v_result = nullptr;
+  stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
+  CHKERR2(err2, machine_get_stack_state(m, &state));
+  CHKERR2(err2, exec_ast(m, v->value.caseof.of, &v_result));
+  CHKERR2(err_case, machine_push(m, v_result));
+  parser_branch_list_t * bl = v->value.caseof.branches;
+  object_t ** out = &(o->value.out);
   while(bl != nullptr) {
     bool isOk = false;
     switch(bl->deconstruct->kind) {
     case DECONSTRUCTOR_IDENTIFIER:
     case DECONSTRUCTOR_ANY: isOk = true; break;
     case DECONSTRUCTOR_TUPLE:
-      isOk = machine_match_test(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v) == EM_RESULT_OK;
+      isOk = machine_match_test(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v_result) == EM_RESULT_OK;
       break;
     case DECONSTRUCTOR_INTEGER:
-      isOk = (object_is_integer(v) && bl->deconstruct->value.integer == object_get_integer(v));
+      isOk = (object_is_integer(v_result) && bl->deconstruct->value.integer == object_get_integer(v_result));
       break;
 #if EMFRP_ENABLE_FLOATING
     case DECONSTRUCTOR_FLOAT: break;
@@ -313,35 +366,28 @@ exec_caseof(machine_t * m, object_t * v, parser_branch_list_t * bl, object_t ** 
     default:DEBUGBREAK; break;
     }
     if(isOk) {
-      em_result errres = EM_RESULT_OK;
-      bool isVariableTableCreated  = false;
-      if((machine_get_variable_table(m)) == nullptr
-	 || (machine_get_variable_table(m))->parent == nullptr) {
-	isVariableTableCreated = true;
-	CHKERR2(err2, machine_new_variable_table(m));
-      }
+      CHKERR2(err_case, machine_new_variable_table(m));
       if(bl->deconstruct->kind == DECONSTRUCTOR_TUPLE) {
-	CHKERR(machine_assign_variable_tuple(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v));
+	CHKERR(machine_assign_variable_tuple(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v_result));
       } else if(bl->deconstruct->kind == DECONSTRUCTOR_IDENTIFIER)
-	CHKERR(machine_assign_variable(m, bl->deconstruct->value.identifier, v));
-      CHKERR(exec_ast(m, bl->body, out));
-    err:
-      if(isVariableTableCreated)
-	machine_pop_variable_table(m);
-    err2:
-      return errres;
+	CHKERR(machine_assign_variable(m, bl->deconstruct->value.identifier, v_result));
+      CHKERR(exec_ast_mono(m, bl->body, o));
+    err: machine_pop_variable_table(m);
     }
     bl = bl->next;
   }
   if(bl == nullptr) *out = nullptr;
   return EM_RESULT_OK;
+ err_case: machine_restore_stack_state(m, state);
+ err2: return errres;
 }
 
 em_result
-exec_begin(machine_t * m, parser_branch_list_t * bl, object_t ** out) {
+exec_ast_begin(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   em_result errres = EM_RESULT_OK;
   object_t * o = nullptr;
   bool isVariableTableCreated = false;
+  parser_branch_list_t * bl = v->value.begin.branches;
   for(;bl != nullptr; bl = bl->next) {
     CHKERR(exec_ast(m, bl->body, &o));
     if(bl->deconstruct != nullptr) {
@@ -366,57 +412,74 @@ exec_begin(machine_t * m, parser_branch_list_t * bl, object_t ** out) {
     }
   }
   machine_pop_variable_table(m);
- err: *out = o; return errres;
+ err:
+  out->value.out = o;
+  return errres;
+}
+
+em_result
+exec_ast_identifier(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  return machine_lookup_variable(m, &(out->value.out), &(v->value.identifier)) ?
+    EM_RESULT_OK : EM_RESULT_MISSING_IDENTIFIER;
+}
+
+em_result
+exec_ast_lastidentifier(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  out->value.out = nullptr;
+  node_t * id;
+  if(!machine_lookup_node(m, &id, &(v->value.identifier)))
+    return EM_RESULT_MISSING_IDENTIFIER;
+  out->value.out = id->last;
+  return EM_RESULT_OK;
+}
+
+em_result
+exec_ast_if(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  em_result errres = EM_RESULT_OK;
+  object_t * cond_result = nullptr;
+  CHKERR(exec_ast(m, v->value.ifthenelse.cond, &cond_result));
+  if(cond_result == nullptr) {
+    out->value.out = nullptr;
+    return EM_RESULT_TYPE_MISMATCH;
+  }
+  return exec_ast_mono(m, cond_result != &object_false ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out);
+ err: return errres; 
+}
+
+const executor bin_op_table[] = {
+  exec_ast_addition, exec_ast_subtract, exec_ast_division, exec_ast_multiplication,
+  exec_ast_modulo, exec_ast_left_shift, exec_ast_right_shift,
+  exec_ast_less_or_equal, exec_ast_less_than, exec_ast_greater_or_equal, exec_ast_greater_than,
+  exec_ast_equal, exec_ast_not_equal, exec_ast_and, exec_ast_or, exec_ast_xor, exec_ast_dand, exec_ast_dor
+};
+
+const executor op_table[] = {
+  nullptr, nullptr, nullptr, exec_ast_identifier, exec_ast_lastidentifier, exec_ast_if, exec_ast_tuple,
+  exec_ast_funccall, exec_ast_func, exec_ast_begin, exec_ast_case
+};
+
+em_result
+exec_ast_mono(machine_t * m, parser_expression_t * v, exec_result_t * out) {
+  if (EXPR_KIND_IS_INTEGER(v)) {
+    return object_new_int(&(out->value.out), (int)((size_t)v >> 2));
+  } else if (EXPR_KIND_IS_BOOLEAN(v)) {
+    out->value.out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
+    return EM_RESULT_OK;
+  } 
+  else if (EXPR_KIND_IS_BIN_OP(v))
+    return bin_op_table[v->kind >> PARSER_EXPRESSION_KIND_SHIFT](m, v, out);
+  else
+    return op_table[v->kind](m, v, out);
 }
 
 em_result
 exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
-  if (EXPR_KIND_IS_INTEGER(v)) {
-    return object_new_int(out, (int)((size_t)v >> 2));
-  } else if (EXPR_KIND_IS_BOOLEAN(v))
-    *out = EXPR_IS_TRUE(v) ? &object_true : &object_false;
-  else if (EXPR_KIND_IS_BIN_OP(v))
-    return exec_ast_bin(m, v->kind, v->value.binary.lhs, v->value.binary.rhs, out);
-  else {
-    switch(v->kind) {
-    case EXPR_KIND_IDENTIFIER:
-      return machine_lookup_variable(m, out, &(v->value.identifier)) ?
-		      EM_RESULT_OK : EM_RESULT_MISSING_IDENTIFIER;
-    case EXPR_KIND_IF: {
-      em_result errres = EM_RESULT_OK;
-      object_t * cond_result = nullptr;
-      stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
-      CHKERR2(err_if2, machine_get_stack_state(m, &state));
-      CHKERR2(err_if2, exec_ast(m, v->value.ifthenelse.cond, &cond_result));
-      CHKERR2(err_if, machine_push(m, cond_result));
-      CHKERR2(err_if, exec_ast(m, cond_result == &object_true ? v->value.ifthenelse.then : v->value.ifthenelse.otherwise, out));
-    err_if:  machine_restore_stack_state(m, state);
-    err_if2: return errres;
-    }
-    case EXPR_KIND_CASE: {
-      em_result errres = EM_RESULT_OK;
-      object_t * v_result = nullptr;
-      stack_state_t state = MACHINE_STACK_STATE_DEFAULT;
-      CHKERR2(err_case2, machine_get_stack_state(m, &state));
-      CHKERR2(err_case2, exec_ast(m, v->value.caseof.of, &v_result));
-      CHKERR2(err_case, machine_push(m, v_result));
-      CHKERR2(err_case, exec_caseof(m, v_result, v->value.caseof.branches, out));
-    err_case: machine_restore_stack_state(m, state);
-    err_case2: return errres;
-    }
-    case EXPR_KIND_BEGIN: return exec_begin(m, v->value.begin.branches, out); break;
-    case EXPR_KIND_LAST_IDENTIFIER: {
-      node_t * id;
-      if(!machine_lookup_node(m, &id, &(v->value.identifier)))
-        return EM_RESULT_MISSING_IDENTIFIER;
-      *out = id->last;
-      break;
-    }
-    case EXPR_KIND_TUPLE:    return exec_tuple(m, &(v->value.tuple), out);
-    case EXPR_KIND_FUNCCALL: return exec_funccall(m, v, out);
-    case EXPR_KIND_FUNCTION: return exec_func(m, v, out);
-    default:                 return EM_RESULT_INVALID_ARGUMENT;
-    }
+  em_result errres = EM_RESULT_OK;
+  exec_result_t o = {EXEC_RESULT_OBJECT, .value.out = nullptr};
+  CHKERR(exec_ast_mono(m, v, &o));
+  while(o.kind == EXEC_RESULT_EXECUTE_FUNCTION) {
+    DEBUGBREAK;
   }
-  return EM_RESULT_OK;
+  *out = o.value.out;
+ err: return errres;
 }
