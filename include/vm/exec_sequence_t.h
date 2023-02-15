@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.h
  * @brief  Emfrp Execution Sequence Type
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/2/15
  ------------------------------------------- */
 #pragma once
 #include "em_result.h"
@@ -165,6 +165,24 @@ exec_sequence_compact(exec_sequence_t * es);
 void
 exec_sequence_free(exec_sequence_t * es);
 
+
+// ! Get dependencies of give AST.
+/* !
+ * \param v The expression
+ * \param out The result
+ * \return The status code
+ */
+em_result get_dependencies_ast(parser_expression_t * v, list_t /*<string_t>*/ ** out);
+
+// ! Check the given identifier is referenced from v.
+/* !
+ * \param v The expression
+ * \param str The string which refers
+ * \return Whether v references str.
+ */
+bool check_depends_on_ast(parser_expression_t * v, string_t * str);
+
+  
 // ! Print out the given node_or_tuple_t.
 void
 node_or_tuple_debug_print(node_or_tuple_t * nt);

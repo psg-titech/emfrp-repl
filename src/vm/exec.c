@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/2/4
+ * @date   2023/2/15
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -419,70 +419,4 @@ exec_ast(machine_t * m, parser_expression_t * v, object_t ** out) {
     }
   }
   return EM_RESULT_OK;
-}
-
-em_result
-get_dependencies_ast(parser_expression_t * v, list_t /*<string_t *>*/ ** out) {
-  em_result errres;
-  if(EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return EM_RESULT_OK;
-  if(v->kind == EXPR_KIND_IDENTIFIER) {
-    string_t * s = &(v->value.identifier);
-    CHKERR(list_add2(out, string_t *, &s));
-  } else if(EXPR_KIND_IS_BIN_OP(v)){
-    CHKERR(get_dependencies_ast(v->value.binary.lhs, out));
-    CHKERR(get_dependencies_ast(v->value.binary.rhs, out));
-  } else switch(v->kind) {
-    case EXPR_KIND_TUPLE:
-      for(parser_expression_tuple_list_t * li = &(v->value.tuple);
-          li != nullptr; li = li->next)
-        CHKERR(get_dependencies_ast(li->value, out));
-      break;
-    case EXPR_KIND_IF:
-      CHKERR(get_dependencies_ast(v->value.ifthenelse.cond, out));
-      CHKERR(get_dependencies_ast(v->value.ifthenelse.then, out));
-      CHKERR(get_dependencies_ast(v->value.ifthenelse.otherwise, out));
-      break;
-    case EXPR_KIND_FUNCCALL:
-      CHKERR(get_dependencies_ast(v->value.funccall.callee, out));
-      if(v->value.funccall.arguments.value != nullptr) {
-        for(parser_expression_tuple_list_t * li = &(v->value.funccall.arguments);
-            li != nullptr; li = li->next)
-          CHKERR(get_dependencies_ast(li->value, out));
-      }
-      break;
-    default: break;
-    }
-  return EM_RESULT_OK;
- err:
-  return errres;
-}
-
-bool
-check_depends_on_ast(parser_expression_t * v, string_t * str) {
-  if (EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return false;
-  if(v->kind == EXPR_KIND_IDENTIFIER)
-    return string_compare(&(v->value.identifier), str);
-  else if(EXPR_KIND_IS_BIN_OP(v))
-    return check_depends_on_ast(v->value.binary.lhs, str) || check_depends_on_ast(v->value.binary.rhs, str);
-  else switch(v->kind) {
-    case EXPR_KIND_TUPLE:
-      for(parser_expression_tuple_list_t * li = &(v->value.tuple);
-          li != nullptr; li = li->next)
-        if(check_depends_on_ast(li->value, str)) return true;
-      return false;
-    case EXPR_KIND_IF:
-      return check_depends_on_ast(v->value.ifthenelse.cond, str)
-        || check_depends_on_ast(v->value.ifthenelse.then, str)
-        || check_depends_on_ast(v->value.ifthenelse.otherwise, str);
-    case EXPR_KIND_FUNCCALL:
-      if(check_depends_on_ast(v->value.funccall.callee, str)) return true;
-      if(v->value.funccall.arguments.value != nullptr) {
-        for(parser_expression_tuple_list_t * li = &(v->value.funccall.arguments);
-            li != nullptr; li = li->next)
-          if(check_depends_on_ast(li->value, str)) return true;
-      }
-      return false;
-     default: break;
-  }
-  return false;
 }
