@@ -31,7 +31,7 @@ typedef struct parser_branch_list_t {
   struct parser_branch_list_t * next;
 } parser_branch_list_t;
 
-#define PARSER_EXPRESSION_KIND_SHIFT 3
+#define PARSER_EXPRESSION_KIND_SHIFT 6
 
 // ! kind enum type of parser expression.
 /* !
@@ -85,26 +85,26 @@ typedef enum parser_expression_kind_t : int32_t {
   EXPR_KIND_DOR = (17 << PARSER_EXPRESSION_KIND_SHIFT) | 1,
     
   // ! Floating literal
-  EXPR_KIND_FLOATING = 1 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_FLOATING = 2,
   // ! Identifier
-  EXPR_KIND_IDENTIFIER = 2 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_IDENTIFIER = 3,
   // ! Identifier @last
-  EXPR_KIND_LAST_IDENTIFIER = 3 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_LAST_IDENTIFIER = 4,
   // ! If expression
-  EXPR_KIND_IF = 4 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_IF = 5,
   // ! Tuple expression
-  EXPR_KIND_TUPLE = 5 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_TUPLE = 6,
   // ! Function call
-  EXPR_KIND_FUNCCALL = 6 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_FUNCCALL = 7,
   // ! Function
-  EXPR_KIND_FUNCTION = 7 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_FUNCTION = 8,
   // ! { ..; ..; }
-  EXPR_KIND_BEGIN = 8 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_BEGIN = 9,
   // ! .. of:
-  EXPR_KIND_CASE = 9 << PARSER_EXPRESSION_KIND_SHIFT,
+  EXPR_KIND_CASE = 10,
 } parser_expression_kind_t;
 
-#define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & 1) == 1)
+#define EXPR_KIND_IS_BIN_OP(expr) (((expr)->kind & ((1 << PARSER_EXPRESSION_KIND_SHIFT) - 1)) == 1)
 #define EXPR_IS_POINTER(expr) (((size_t)(expr) & 0x3) == 0)
 #define EXPR_KIND_IS_INTEGER(expr) (((size_t)(expr) & 0x3) == 1)
 #if EMFRP_ENABLE_FLOATING

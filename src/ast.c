@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/24
+ * @date   2023/2/15
  ------------------------------------------- */
 
 #include "ast.h"
@@ -247,16 +247,10 @@ parser_expression_print(parser_expression_t * e) {
     printf("%f", uninline_float(e));
 #endif
   else if(EXPR_KIND_IS_BOOLEAN(e))
-    printf(EXPR_IS_TRUE(e) ? "true" : "false");
-  else if((e->kind & 1) == 1) {
-    printf("(");
-    parser_expression_print(e->value.binary.lhs);
-    printf(" %s ", binary_op_table[e->kind >> PARSER_EXPRESSION_KIND_SHIFT]);
-    parser_expression_print(e->value.binary.rhs);
-    printf(")");
-  } else if (e == nullptr) {
-    printf("NIL");
-  } else {
+    fputs(EXPR_IS_TRUE(e) ? "true" : "false", stdout);
+  else if (e == nullptr)
+    fputs("NIL", stdout);
+  else {
     switch(e->kind) {
     case EXPR_KIND_FLOATING:
       printf("%f", e->value.floating); break;
@@ -350,7 +344,14 @@ parser_expression_print(parser_expression_t * e) {
       printf("))");
       break;
     }
-    default: DEBUGBREAK; break;
+    default: if (EXPR_KIND_IS_BIN_OP(e)) {
+	printf("(");
+	parser_expression_print(e->value.binary.lhs);
+	printf(" %s ", binary_op_table[e->kind >> PARSER_EXPRESSION_KIND_SHIFT]);
+	parser_expression_print(e->value.binary.rhs);
+	printf(")");
+	break;
+      } else DEBUGBREAK;
     }
   }
 }
@@ -359,73 +360,72 @@ void
 parser_expression_free(parser_expression_t * expr) {
   if(!EXPR_IS_POINTER(expr)) return; // It is not pointer.
   if(expr == nullptr) return;
-  if(EXPR_KIND_IS_BIN_OP(expr)) {
-    parser_expression_free(expr->value.binary.lhs);
-    parser_expression_free(expr->value.binary.rhs);
-  } else
-    switch(expr->kind) {
-    case EXPR_KIND_IDENTIFIER:
-    case EXPR_KIND_LAST_IDENTIFIER:
-      string_free(&(expr->value.identifier)); break;
-    case EXPR_KIND_IF:
-      parser_expression_free(expr->value.ifthenelse.cond);
-      parser_expression_free(expr->value.ifthenelse.then);
-      parser_expression_free(expr->value.ifthenelse.otherwise);
-      break;
-    case EXPR_KIND_CASE:
-      parser_expression_free(expr->value.caseof.of);
-      for(parser_branch_list_t * bl = expr->value.caseof.branches; bl != nullptr;) {
-	deconstructor_free_deep(bl->deconstruct);
-	parser_expression_free(bl->body);
-	parser_branch_list_t * prev = bl;
-	bl = bl->next;
-	em_free(prev);
-      }
-      break;
-    case EXPR_KIND_BEGIN:
-      for(parser_branch_list_t * bl = expr->value.begin.branches; bl != nullptr;) {
-	if(bl->deconstruct != nullptr) deconstructor_free_deep(bl->deconstruct);
-	parser_expression_free(bl->body);
-	parser_branch_list_t * prev = bl;
-	bl = bl->next;
-	em_free(prev);
-      }
-      break;
-    case EXPR_KIND_TUPLE: {
-      parser_expression_tuple_list_t * tl = &expr->value.tuple;
+  switch(expr->kind) {
+  case EXPR_KIND_IDENTIFIER:
+  case EXPR_KIND_LAST_IDENTIFIER:
+    string_free(&(expr->value.identifier)); break;
+  case EXPR_KIND_IF:
+    parser_expression_free(expr->value.ifthenelse.cond);
+    parser_expression_free(expr->value.ifthenelse.then);
+    parser_expression_free(expr->value.ifthenelse.otherwise);
+    break;
+  case EXPR_KIND_CASE:
+    parser_expression_free(expr->value.caseof.of);
+    for(parser_branch_list_t * bl = expr->value.caseof.branches; bl != nullptr;) {
+      deconstructor_free_deep(bl->deconstruct);
+      parser_expression_free(bl->body);
+      parser_branch_list_t * prev = bl;
+      bl = bl->next;
+      em_free(prev);
+    }
+    break;
+  case EXPR_KIND_BEGIN:
+    for(parser_branch_list_t * bl = expr->value.begin.branches; bl != nullptr;) {
+      if(bl->deconstruct != nullptr) deconstructor_free_deep(bl->deconstruct);
+      parser_expression_free(bl->body);
+      parser_branch_list_t * prev = bl;
+      bl = bl->next;
+      em_free(prev);
+    }
+    break;
+  case EXPR_KIND_TUPLE: {
+    parser_expression_tuple_list_t * tl = &expr->value.tuple;
+    parser_expression_free(tl->value);
+    tl = tl->next;
+    while(tl != nullptr) {
+      parser_expression_tuple_list_t * v = tl->next;
       parser_expression_free(tl->value);
-      tl = tl->next;
-      while(tl != nullptr) {
-	parser_expression_tuple_list_t * v = tl->next;
-	parser_expression_free(tl->value);
-	free(tl);
-	tl = v;
-      }
-      break;
+      free(tl);
+      tl = v;
     }
-    case EXPR_KIND_FUNCCALL: {
-      parser_expression_tuple_list_t * tl = &expr->value.funccall.arguments;
-      tl = tl->next;
-      while(tl != nullptr) {
-        parser_expression_tuple_list_t * v = tl->next;
-        parser_expression_free(tl->value);
-        free(tl);
-        tl = v;
-      }
-      parser_expression_free(expr->value.funccall.callee);
-      break;
+    break;
+  }
+  case EXPR_KIND_FUNCCALL: {
+    parser_expression_tuple_list_t * tl = &expr->value.funccall.arguments;
+    tl = tl->next;
+    while(tl != nullptr) {
+      parser_expression_tuple_list_t * v = tl->next;
+      parser_expression_free(tl->value);
+      free(tl);
+      tl = v;
     }
-    case EXPR_KIND_FUNCTION: {
-      deconstructor_t dt = {DECONSTRUCTOR_TUPLE, .value.tuple.tag = nullptr, .value.tuple.data = expr->value.function.arguments};
-      expr->value.function.reference_count--;
-      if(expr->value.function.reference_count > 0) return;
-      parser_expression_free(expr->value.function.body);
+    parser_expression_free(expr->value.funccall.callee);
+    break;
+  }
+  case EXPR_KIND_FUNCTION: {
+    deconstructor_t dt = {DECONSTRUCTOR_TUPLE, .value.tuple.tag = nullptr, .value.tuple.data = expr->value.function.arguments};
+    expr->value.function.reference_count--;
+    if(expr->value.function.reference_count > 0) return;
+    parser_expression_free(expr->value.function.body);
       
-      deconstructor_free_deep(&dt);
-      em_free(expr->value.function.arguments);
-      break;
-    }
-    default: break;
-    }
+    deconstructor_free_deep(&dt);
+    em_free(expr->value.function.arguments);
+    break;
+  }
+  default: if (EXPR_KIND_IS_BIN_OP(expr)) {
+      parser_expression_free(expr->value.binary.lhs);
+      parser_expression_free(expr->value.binary.rhs);
+    } else DEBUGBREAK;
+  }
   free(expr);
 }
