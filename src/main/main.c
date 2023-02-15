@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/1/22
+ * @date   2022/2/15
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -30,6 +30,8 @@ int main(void) {
       em_free(line.buffer);
       continue;
     }
+    if(line.length == 4 && strncmp(line.buffer, "exit", 4) == 0)
+      return 0;
     parser_context_t *ctx = parser_create(&parser_reader);
     if(!parser_parse(ctx, (void **)&parsed)) {
       object_t * o = nullptr;
