@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/25
+ * @date   2023/2/16
  ------------------------------------------- */
 
 #pragma once
@@ -188,14 +188,25 @@ machine_assign_variable(machine_t * self, string_t * name, struct object_t * val
   return variable_table_assign(self, self->variable_table, name, value);
 }
 
-// ! Assign values to the deconstructor.
+// ! Match values to the deconstructors.
 /* !
  * \param self The machine
  * \param nt The deconstructor
- * \param v The tuple object
+ * \param length The length of vs
+ * \param vs The pointer to the array of objects
  * \return The result
  */
-em_result machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
+em_result machine_match(machine_t * self, list_t /*<deconstructor_t>*/ * nt, struct object_t ** vs, int length);
+
+
+// ! Match value to the deconstructor.
+/* !
+ * \param self The machine
+ * \param nt The deconstructor
+ * \param v The object
+ * \return The result
+ */
+em_result machine_matches(machine_t * self, deconstructor_t * deconst, struct object_t * v);
 
 // ! Match the values to the deconstructor.
 /* !
@@ -204,7 +215,7 @@ em_result machine_assign_variable_tuple(machine_t * self, string_t * tag, list_t
  * \param v The tuple object
  * \return The result
  */
-em_result machine_match_test(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
+em_result machine_test_match(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
 
 // ! Lookup a value of the variable.
 /* !

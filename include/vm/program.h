@@ -2,7 +2,7 @@
  * @file   program.h
  * @brief  Emfrp Program Representation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/2/16
  ------------------------------------------- */
 #pragma once
 
@@ -13,7 +13,8 @@ extern "C" {
 struct object_t;
 
 typedef struct object_t * (*exec_callback_t)(void);
-typedef em_result (*foreign_func_t)(struct object_t **, struct object_t *);
+// An output, arguments, length of arguments
+typedef em_result (*foreign_func_t)(struct object_t **, struct object_t **, int);
 #define EXEC_SEQUENCE_PROGRAM_KIND_SHIFT 3
 
 // ! Program kind of node.
