@@ -303,12 +303,11 @@ exec_ast_case(machine_t * m, parser_expression_t * v, exec_result_t * o) {
       CHKERR(machine_matches(m, bl->deconstruct, v_result));
       CHKERR(exec_ast_mono(m, bl->body, o));
     err: machine_pop_variable_table(m);
-      break;
+      return errres;
     }
     bl = bl->next;
   }
   if(bl == nullptr) *out = nullptr;
-  return EM_RESULT_OK;
  err2: return errres;
 }
 
