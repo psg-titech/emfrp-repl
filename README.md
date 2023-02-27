@@ -1,21 +1,21 @@
 # emfrp-repl
-A REPL implementation of Emfrp, running on low power devices.
+A REPL implementation of Emfrp, running on embedded devices.
 
 # Requirements
 This is the tested environment.
  * Windows 10 or 11
-   * Visual Studio 2019 or 2022 (Maybe compatible for 2013, 2015, and 2017)
+   * Visual Studio 2019 or 2022 (Maybe compatible with 2013, 2015, and 2017)
  * DragonFly 6.2.2
    * gcc 8.3 (also clang)
  * Haiku R1/beta hrev55181+67
    * gcc 11.2
  * Debian 11
    * clang 11.0 or 10.2
- * macOS 13 Ventura -- currently broken, due to CMake on macOS's bug.
+ * macOS 13 Ventura
    * MacBook Air (M1, 2020)
 
 # How to build
-## How to build for own devices
+## How to build for your host PC.
 ### clang/gcc based OSes
 1. Execute `project/common/setup-?.sh` as a privilaged user.  
    FreeBSD and DragonFly: setup-bsd.sh  
@@ -39,10 +39,7 @@ This is the tested environment.
 5. Build and debug!
 
 ### GUI Emfrp-REPL
-We recommend not to use on macOS.  
-You had better use Linux, or Windows on virtual machines if you use macOS.  
-
-1. Execute `gui/emfrp-repl-gui.py` by Python 3.x.
+1. Run `gui/emfrp-repl-gui.py` with Python 3.x.
 
 ## Compilation for ESP32
 ### Install esp-idf SDK.
