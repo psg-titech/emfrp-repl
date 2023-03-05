@@ -1,6 +1,6 @@
 /** -------------------------------------------
  * @file   console.rpi.c
- * @brief  Emfrp-repl Entry Point
+ * @brief  Console Implementation for Raspberry Pi Pico.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
  * @date   2023/1/6
  ------------------------------------------- */

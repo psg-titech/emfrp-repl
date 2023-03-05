@@ -21,10 +21,18 @@ typedef char char_t;
 #define em_strlen(s) strlen(s)
 #endif
 
+#if defined(__cplusplus)
+#if __cplusplus < 201100L
+// nullptr is appeared in C23.
+#define nullptr NULL
+typedef void* nullptr_t;
+#endif
+#else 
 #if __STD_VERSION__ <= 201710L
 // nullptr is appeared in C23.
 #define nullptr NULL
 typedef void* nullptr_t;
+#endif
 #endif
 
 #if !defined(MIN)

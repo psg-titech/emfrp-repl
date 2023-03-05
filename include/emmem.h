@@ -2,7 +2,7 @@
  * @file   emmem.h
  * @brief  Memory Management Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/3/3
  ------------------------------------------- */
 
 #pragma once
@@ -36,7 +36,7 @@ em_realloc(void ** out, void * ptr, size_t size) {
 }
 
 #define em_free(ptr) free(ptr)
-#if _MSC_VER || __APPLE__
+#if _MSC_VER || __APPLE__ || __MBED__
 #define em_allocarray(o, nmemb, size) em_malloc(o, (size) * (nmemb))
 #define em_reallocarray(o, ptr, size, nmemb) em_realloc(o, ptr, (size) * (nmemb))
 #else

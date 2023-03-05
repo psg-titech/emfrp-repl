@@ -4,7 +4,7 @@
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
  * @date   2022/2/15
  ------------------------------------------- */
-
+#if !defined(__MBED__)
 #include <stdio.h>
 #include "hal/console.h"
 #include "emfrp_parser.h"
@@ -55,3 +55,4 @@ int main(void) {
   }
   return 0;
 }
+#endif
