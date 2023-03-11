@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/2/16
+ * @date   2023/3/11
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -23,8 +23,9 @@ em_result exec_ast_mono(machine_t * m, parser_expression_t * v, exec_result_t * 
 bool
 exec_equal(object_t * l, object_t * r) {
   bool b = true;
-  if(!object_is_pointer(l) && !object_is_pointer(r))
-    return l == r;
+  if(l == r)
+    return true;
+  if(!object_is_pointer(l) || !object_is_pointer(r)) return false;
   if(object_kind(l) != object_kind(r)) return false;
   switch(object_kind(l)) {
   case EMFRP_OBJECT_TUPLE1:
@@ -46,7 +47,7 @@ exec_equal(object_t * l, object_t * r) {
   case EMFRP_OBJECT_FUNCTION:
   case EMFRP_OBJECT_VARIABLE_TABLE:
     return false;
-  default: DEBUGBREAK; return false;
+  default: return false;
   }
 }
 
@@ -99,7 +100,6 @@ exec_ast_equal(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   CHKERR(exec_ast(m, v->value.binary.lhs, &lro));
   CHKERR(machine_push(m, lro));
   CHKERR(exec_ast(m, v->value.binary.rhs, &rro));
-  if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;
   out->value = exec_equal(lro, rro) ? &object_true : &object_false;
  err: return errres;  
 }
@@ -111,7 +111,6 @@ exec_ast_not_equal(machine_t * m, parser_expression_t * v, exec_result_t * out) 
   CHKERR(exec_ast(m, v->value.binary.lhs, &lro));
   CHKERR(machine_push(m, lro));
   CHKERR(exec_ast(m, v->value.binary.rhs, &rro));
-  if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;
   out->value = exec_equal(lro, rro) ? &object_false : &object_true;
  err: return errres;  
 }
