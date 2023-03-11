@@ -162,8 +162,7 @@ bool
 exec_sequence_compact(exec_sequence_t * es);
 
 // ! Freeing the exec_sequence. In this method, it does not call em_free(es);
-void
-exec_sequence_free(exec_sequence_t * es);
+void exec_sequence_free(exec_sequence_t * es);
 
 
 // ! Get dependencies of give AST.
@@ -172,15 +171,19 @@ exec_sequence_free(exec_sequence_t * es);
  * \param out The result
  * \return The status code
  */
-em_result get_dependencies_ast(parser_expression_t * v, list_t /*<string_t>*/ ** out);
+em_result get_dependencies_ast(struct machine_t * machine, parser_expression_t * v, list_t /*<string_t>*/ ** out);
 
 // ! Check the given identifier is referenced from v.
+  
 /* !
  * \param v The expression
  * \param str The string which refers
  * \return Whether v references str.
  */
 bool check_depends_on_ast(parser_expression_t * v, string_t * str);
+
+
+em_result topological_sort(struct machine_t * machine, list_t /*<exec_sequence_t>*/ ** es, list_t /*<exec_sequence_t>*/ *** last_es);
 
   
 // ! Print out the given node_or_tuple_t.

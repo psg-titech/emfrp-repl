@@ -305,23 +305,7 @@ check_dependencies(machine_t * self, parser_expression_t * prog, list_t ** execu
   list_t ** p = executionlist_head;
   list_t * /*<string_t *>*/ dependencies;
   CHKERR(list_default(&dependencies));
-  CHKERR(get_dependencies_ast(prog, &dependencies));
-  {
-    list_t * cur = dependencies;
-    list_t ** p = &dependencies;
-    while(!LIST_IS_EMPTY(&cur)) {
-      object_t * _;
-      if(variable_table_lookup(machine_get_variable_table(self), &_, (string_t *)(cur->value))) {
-	*p = cur->next;
-	em_free(cur);
-	cur = *p;
-      } else {
-	p = &(cur->next);
-	cur = LIST_NEXT(cur);
-      }
-    }
-  }
-
+  CHKERR(get_dependencies_ast(self, prog, &dependencies));
   // Search where to insert.
   // Inserted after all dependencies are satisfied.
   while(!LIST_IS_EMPTY(&dependencies)) {
@@ -476,9 +460,10 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
   if(journal != nullptr // If it contains already-defined nodes
      && has_cyclicreference2(&(n->name), self->execution_list.head, *whereto_insert)
      && (n->as == nullptr || has_cyclicreference(n->as, self->execution_list.head, *whereto_insert))) {
-    errres = EM_RESULT_CYCLIC_REFERENCE;
-    // TODO: Full Topological Sort
-    goto err;
+    if(topological_sort(self, &(self->execution_list.head), &(self->execution_list.last)) != EM_RESULT_OK) {
+      errres = EM_RESULT_CYCLIC_REFERENCE;
+      goto err;
+    }
   }
   CHKERR(list_add4(whereto_insert, exec_sequence_t, &new_exec_seq, (void**)&new_entry));
   if(LIST_IS_EMPTY(&((*whereto_insert)->next)))
