@@ -129,8 +129,8 @@ comp2 <- l:comp2 _ '<=' _ r:shift { $$ = parser_expression_new_less_or_equal   (
        / l:comp2 _ '>'  _ r:shift { $$ = parser_expression_new_greater_than    (l, r); }
        / s:shift                 { $$ = s; }
 
-shift <- l:shift '<<' _ r:add { $$ = parser_expression_new_left_shift(l, r); }
-       / l:shift '<<' _ r:add { $$ = parser_expression_new_right_shift(l, r); }
+shift <- l:shift _ '<<' _ r:add { $$ = parser_expression_new_left_shift(l, r); }
+       / l:shift _ '>>' _ r:add { $$ = parser_expression_new_right_shift(l, r); }
        / a:add                { $$ = a; }
 
 add <- l:add _ '+' _ r:factor { $$ = parser_expression_new_addition(l, r); }
