@@ -2,7 +2,7 @@
  * @file   em_result.h
  * @brief  Status Code
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/3/20
  ------------------------------------------- */
 #pragma once
 
@@ -11,8 +11,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 // Apple Clang warns, if there is not additional parences.
-#define CHKERR(v) if((errres = (v))) goto err;
-#define CHKERR2(label, v) if((errres = (v))) goto label;
+#define CHKERR(v) { if((errres = (v))) goto err; }
+#define CHKERR2(label, v) { if((errres = (v))) goto label; }
+
+// Execute test, and goto err if the result is false.
+#define TEST_AND_ERR(test, reason) if(test) { errres = (reason); goto err; }
 
 // ! Result Status
 typedef enum em_result_t {

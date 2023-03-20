@@ -2,12 +2,10 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/11
+ * @date   2023/3/20
  ------------------------------------------- */
 
 #include "vm/exec.h"
-
-#define TEST_AND_ERR(test, reason) if(test) { errres = (reason); goto err; }
 
 typedef struct exec_result_t {
   object_t * value;
