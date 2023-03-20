@@ -15,7 +15,7 @@ extern "C" {
 #define CHKERR2(label, v) { if((errres = (v))) goto label; }
 
 // Execute test, and goto err if the result is false.
-#define TEST_AND_ERR(test, reason) if(test) { errres = (reason); goto err; }
+#define TEST_AND_ERROR(test, reason) if(test) { errres = (reason); goto err; }
 
 // ! Result Status
 typedef enum em_result_t {

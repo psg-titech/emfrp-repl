@@ -55,9 +55,9 @@ exec_equal(object_t * l, object_t * r) {
     em_result errres = EM_RESULT_OK;					\
     int ll, rr;								\
     CHKERR(exec_ast(m, v->value.binary.lhs, &lro));			\
-    if(!object_is_integer(lro)) return EM_RESULT_TYPE_MISMATCH;		\
+    TEST_AND_ERROR(!object_is_integer(lro), EM_RESULT_TYPE_MISMATCH);	\
     CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
-    if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;		\
+    TEST_AND_ERROR(!object_is_integer(rro), EM_RESULT_TYPE_MISMATCH);	\
     ll = object_get_integer(lro);					\
     rr = object_get_integer(rro);					\
     object_new_int(&(out->value), expression);			\
@@ -70,9 +70,9 @@ exec_equal(object_t * l, object_t * r) {
     em_result errres = EM_RESULT_OK;					\
     int ll, rr;								\
     CHKERR(exec_ast(m, v->value.binary.lhs, &lro));			\
-    if(!object_is_integer(lro)) return EM_RESULT_TYPE_MISMATCH;		\
+    TEST_AND_ERROR(!object_is_integer(lro), EM_RESULT_TYPE_MISMATCH);	\
     CHKERR(exec_ast(m, v->value.binary.rhs, &rro));			\
-    if(!object_is_integer(rro)) return EM_RESULT_TYPE_MISMATCH;		\
+    TEST_AND_ERROR(!object_is_integer(rro), EM_RESULT_TYPE_MISMATCH);	\
     ll = object_get_integer(lro);					\
     rr = object_get_integer(rro);					\
     out->value = (expression) ? &object_true : &object_false;	\
@@ -150,12 +150,11 @@ exec_ast_tuple_list_t(machine_t * m, parser_expression_tuple_list_t * li, int * 
   em_result errres = EM_RESULT_OK;
   int len = 0;
   *length = 0;
-  while(li != nullptr) {
+  for(;li != nullptr; li = LIST_NEXT(li)) {
     object_t * cur = nullptr;
     len++;
     CHKERR(exec_ast(m, li->value, &cur));
     CHKERR(machine_push(m, cur));
-    li = LIST_NEXT(li);
   }
   *length = len;
  err: return errres;
@@ -214,17 +213,15 @@ exec_ast_funccall(machine_t * m, parser_expression_t * v, exec_result_t * out) {
     CHKERR(exec_ast_tuple_list_t(m, &(v->value.funccall.arguments), &arglen));
   // Evaluate Callee.
   CHKERR(exec_ast(m, v->value.funccall.callee, &callee));
-  if(!object_is_pointer(callee) || callee == nullptr || (object_kind(callee) != EMFRP_OBJECT_FUNCTION))
-    return EM_RESULT_TYPE_MISMATCH;
+  TEST_AND_ERROR(!object_is_pointer(callee) || callee == nullptr || (object_kind(callee) != EMFRP_OBJECT_FUNCTION), EM_RESULT_TYPE_MISMATCH);
   CHKERR(machine_push(m, callee));
   // Execute.
   switch(callee->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:
     out->kind = EXEC_RESULT_EXECUTE_FUNCTION;
     out->value = callee;
-    for(int i = 0; i < arglen; ++i) {
+    for(int i = 0; i < arglen; ++i)
       CHKERR(machine_mark_gray(m, m->stack->value.stack.data[out->stack_state + i]));
-    }
     // May rewrite to memmove.
     memcpy(&(m->stack->value.stack.data[out->stack_state]), &(m->stack->value.stack.data[state]), arglen * sizeof(object_t *));
     out->arglen = arglen;
@@ -232,26 +229,26 @@ exec_ast_funccall(machine_t * m, parser_expression_t * v, exec_result_t * out) {
   case EMFRP_PROGRAM_KIND_NOTHING: break;
   case EMFRP_PROGRAM_KIND_CALLBACK: CHKERR(callee->value.function.function.callback(o, &(m->stack->value.tupleN.data[state]), arglen)); break;
   case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
-    TEST_AND_ERR(callee->value.function.function.construct.arity != arglen, EM_RESULT_INVALID_ARGUMENT);
+    TEST_AND_ERROR(callee->value.function.function.construct.arity != arglen, EM_RESULT_INVALID_ARGUMENT);
     CHKERR(exec_ast_construct_tuple(m, callee->value.function.function.construct.tag, arglen, &(m->stack->value.tupleN.data[state]), o));
     break;
   case EMFRP_PROGRAM_KIND_RECORD_ACCESS: {
     object_t * t = m->stack->value.tupleN.data[state];
     size_t access_index = callee->value.function.function.access.index;
     object_t * tag = callee->value.function.function.access.tag;
-    TEST_AND_ERR(arglen != 1, EM_RESULT_INVALID_ARGUMENT);
-    if(!object_is_pointer(t) || t == nullptr) return EM_RESULT_TYPE_MISMATCH;
+    TEST_AND_ERROR(arglen != 1, EM_RESULT_INVALID_ARGUMENT);
+    TEST_AND_ERROR(!object_is_pointer(t) || t == nullptr, EM_RESULT_TYPE_MISMATCH);
     switch(object_kind(t))  {
     case EMFRP_OBJECT_TUPLE1:
-      TEST_AND_ERR(!exec_equal(t->value.tuple1.tag, tag) || access_index >= 1, EM_RESULT_TYPE_MISMATCH);
+      TEST_AND_ERROR(!exec_equal(t->value.tuple1.tag, tag) || access_index >= 1, EM_RESULT_TYPE_MISMATCH);
       *o = t->value.tuple1.i0;
       break;
     case EMFRP_OBJECT_TUPLE2:
-      TEST_AND_ERR(!exec_equal(t->value.tuple2.tag, tag) || access_index >= 2, EM_RESULT_TYPE_MISMATCH);
+      TEST_AND_ERROR(!exec_equal(t->value.tuple2.tag, tag) || access_index >= 2, EM_RESULT_TYPE_MISMATCH);
       *o = access_index == 0 ? t->value.tuple2.i0 : t->value.tuple2.i1;
       break;
     case EMFRP_OBJECT_TUPLEN:
-      TEST_AND_ERR(!exec_equal(t->value.tupleN.tag, tag) || access_index >= t->value.tupleN.length, EM_RESULT_TYPE_MISMATCH);
+      TEST_AND_ERROR(!exec_equal(t->value.tupleN.tag, tag) || access_index >= t->value.tupleN.length, EM_RESULT_TYPE_MISMATCH);
       *o = object_tuple_ith(t, access_index);
       break;
     default: errres = EM_RESULT_TYPE_MISMATCH; goto err;
@@ -278,33 +275,32 @@ exec_ast_case(machine_t * m, parser_expression_t * v, exec_result_t * o) {
   CHKERR2(err2, exec_ast(m, v->value.caseof.of, &v_result));
   CHKERR2(err2, machine_push(m, v_result));
   parser_branch_list_t * bl = v->value.caseof.branches;
-  object_t ** out = &(o->value);
-  while(bl != nullptr) {
-    bool isOk = false;
+  for(;bl != nullptr; bl = bl->next) {
     switch(bl->deconstruct->kind) {
-    case DECONSTRUCTOR_IDENTIFIER:
-    case DECONSTRUCTOR_ANY: isOk = true; break;
+    case DECONSTRUCTOR_IDENTIFIER: case DECONSTRUCTOR_ANY: goto match_ok;
     case DECONSTRUCTOR_TUPLE:
-      isOk = machine_test_match(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v_result) == EM_RESULT_OK;
+      if(machine_test_match(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v_result) == EM_RESULT_OK)
+	goto match_ok;
       break;
     case DECONSTRUCTOR_INTEGER:
-      isOk = (object_is_integer(v_result) && bl->deconstruct->value.integer == object_get_integer(v_result));
+      if(object_is_integer(v_result) && bl->deconstruct->value.integer == object_get_integer(v_result))
+	goto match_ok;
       break;
 #if EMFRP_ENABLE_FLOATING
     case DECONSTRUCTOR_FLOAT: break;
 #endif
-    default:DEBUGBREAK; break;
+    default: DEBUGBREAK; break;
     }
-    if(isOk) {
+    continue;
+  match_ok: {
       CHKERR2(err2, machine_new_variable_table(m));
       CHKERR(machine_matches(m, bl->deconstruct, v_result));
       CHKERR(exec_ast_mono(m, bl->body, o));
     err: machine_pop_variable_table(m);
-      return errres;
+      return errres; // Leave this function.
     }
-    bl = bl->next;
   }
-  if(bl == nullptr) *out = nullptr;
+  if(bl == nullptr) o->value = nullptr; // Nothing matches.
  err2: return errres;
 }
 
@@ -324,7 +320,7 @@ exec_ast_begin(machine_t * m, parser_expression_t * v, exec_result_t * out) {
     }
   }
   goto last_turn;
-  for(; bl->next != nullptr; bl = bl->next) {
+  for(;bl->next != nullptr; bl = bl->next) {
     CHKERR(exec_ast(m, bl->body, &o));
     if(bl->deconstruct != nullptr) {
     assign:
@@ -371,8 +367,8 @@ exec_ast_execute_function(machine_t * m, object_t * v, int arglen, exec_result_t
   variable_table_t * prev_vt = nullptr;
   switch(v->value.function.kind) {
   case EMFRP_PROGRAM_KIND_AST:
-    if((arglen != 0) ^ (v->value.function.function.ast.program->value.function.arguments != nullptr))
-       return EM_RESULT_INVALID_ARGUMENT;
+    TEST_AND_ERROR((arglen != 0) ^ (v->value.function.function.ast.program->value.function.arguments != nullptr), 
+		   EM_RESULT_INVALID_ARGUMENT);
     prev_vt = machine_get_variable_table(m);
     CHKERR(machine_push(m, prev_vt->this_object_ref));
     if(v->value.function.function.ast.closure == nullptr) {
@@ -381,9 +377,8 @@ exec_ast_execute_function(machine_t * m, object_t * v, int arglen, exec_result_t
 	      object_kind(v->value.function.function.ast.closure) != EMFRP_OBJECT_VARIABLE_TABLE) {
       errres = EM_RESULT_INVALID_ARGUMENT;
       goto err;
-    } else {
+    } else
       CHKERR(machine_set_variable_table(m, v->value.function.function.ast.closure->value.variable_table.ptr));
-    }
     CHKERR2(err2, machine_new_variable_table(m));
     CHKERR2(err2, machine_match(m, v->value.function.function.ast.program->value.function.arguments,
 				&(m->stack->value.stack.data[out->stack_state]), arglen));
