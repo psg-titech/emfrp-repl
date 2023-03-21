@@ -2,12 +2,13 @@
  * @file   string_t.h
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/2/21
  ------------------------------------------- */
 
 #pragma once
 #include "em_result.h"
 #include "misc.h"
+#include "emmem.h"
 #include <string.h>
 #include <stdbool.h>
 
@@ -26,13 +27,21 @@ typedef struct string_t {
 /* !
  * \param str String to be cleared.
  */
-void string_null(string_t * str);
+static inline void
+string_null(string_t * str) {
+  str->buffer = nullptr;
+  str->length = 0;
+}
 
 // ! Freeing buffer.
 /* !
  * \param str String to be freed.
  */
-void string_free(string_t * str);
+static inline void
+string_free(string_t * str) {
+  if(str->buffer != nullptr) em_free(str->buffer);
+  string_null(str);
+}
 
 // ! Construct string_t.
 /* !
@@ -40,13 +49,19 @@ void string_free(string_t * str);
  * \param buffer The buffer. Not copied.
  * \param length Length of buffer.
  */
-void string_new(string_t * out, char_t * buffer, const size_t length);
+static inline void
+string_new(string_t * out, char_t * buffer, const size_t length) {
+  out->buffer = buffer;
+  out->length = length;
+}
+
 // ! Java's CharAt.
 /* !
  * \param str string_t to be referenced.
  * \param i Index
  */
-static inline char_t string_getAt(string_t * str, const int i) { return str->buffer[i]; }
+static inline char_t
+string_getAt(string_t * str, const int i) { return str->buffer[i]; }
 
 // ! Construct string_t by C String.
 /* !

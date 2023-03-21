@@ -2,32 +2,13 @@
  * @file   string_t.c
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2022/11/4
+ * @date   2023/3/21
  ------------------------------------------- */
 
 #include "string_t.h"
-#include "emmem.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-void
-string_null(string_t * str) {
-  str->buffer = nullptr;
-  str->length = 0;
-}
-
-void
-string_free(string_t * str) {
-  if(str->buffer != nullptr) em_free(str->buffer);
-  str->buffer = nullptr;
-  str->length = 0;
-}
-
-void
-string_new(string_t * out, char_t * buffer, const size_t length) {
-  out->buffer = buffer;
-  out->length = length;
-}
 
 string_t *
 string_malloc_new(const char_t * buffer) {
@@ -41,14 +22,19 @@ string_malloc_new(const char_t * buffer) {
 
 em_result
 string_copy(string_t * dst, const string_t * src) {
+  em_result errres = EM_RESULT_OK;
   dst->length = src->length;
-  dst->buffer = em_strdup(src->buffer);
-  return EM_RESULT_OK;
+  em_allocarray((void **)&(dst->buffer), sizeof(char), src->length + 1);
+  memcpy(dst->buffer, src->buffer, src->length * sizeof(char));
+  dst->buffer[dst->length] = '\0';
+ err: return errres;
 }
 
 
 size_t
 string_hash(const string_t * self) {
+  return self->buffer[0];
+    // Light implementation above.
   size_t ret = 0;
   for(int i = 0; i < self->length; ++i)
     ret ^= self->buffer[i];
