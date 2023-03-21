@@ -2,7 +2,7 @@
  * @file   gc.h
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/11
+ * @date   2023/3/21
  ------------------------------------------- */
 
 #pragma once
@@ -49,13 +49,26 @@ typedef struct memory_manager_t {
   int sweeper;
 } memory_manager_t;
 
-// ! Push to work list(Coloring with gray.)
+// ! Push to work list without checking the state. (Coloring with gray.)
 /* !
  * /param self The memory manager
  * /param obj The object to be colored with gray.
- * /return The result(may return from em_malloc.)
+ * /return The result
  */
-em_result memory_manager_push_worklist(memory_manager_t * self, object_t * obj);
+em_result
+memory_manager_push_worklist_uncheck_state(memory_manager_t * self, object_t * obj);
+
+// ! Push to work list (Coloring with gray.)
+/* !
+ * /param self The memory manager
+ * /param obj The object to be colored with gray.
+ * /return The result
+ */
+static inline em_result
+memory_manager_push_worklist(memory_manager_t * self, object_t * obj) {
+  return self->state == MEMORY_MANAGER_STATE_MARK ?
+    memory_manager_push_worklist_uncheck_state(self, obj) : EM_RESULT_OK;
+}
 #define machine_mark_gray(self, obj) memory_manager_push_worklist((self)->memory_manager, obj)
 
 // ! Allocating and newing  memory_manager_t.

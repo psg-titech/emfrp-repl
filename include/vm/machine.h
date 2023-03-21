@@ -127,8 +127,10 @@ machine_get_stack_state(machine_t * self, stack_state_t * out) {
 static inline em_result
 machine_restore_stack_state(machine_t * self, stack_state_t state) {
   em_result errres = EM_RESULT_OK;
-  for(int i = state; i < self->stack->value.stack.length; ++i)
-    CHKERR(machine_mark_gray(self, self->stack->value.stack.data[i]));
+  if(self->memory_manager->state == MEMORY_MANAGER_STATE_MARK) {
+    for(int i = state; i < self->stack->value.stack.length; ++i)
+      CHKERR(memory_manager_push_worklist_uncheck_state(self->memory_manager, self->stack->value.stack.data[i]));
+  }
   self->stack->value.stack.length = state;
  err: return errres;
 }

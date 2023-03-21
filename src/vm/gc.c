@@ -2,7 +2,7 @@
  * @file   gc.c
  * @brief  A memory manager(snapshot GC)
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/3/21
  ------------------------------------------- */
 #include "emmem.h"
 #include "ast.h"
@@ -15,7 +15,7 @@
 
 em_result
 memory_manager_new(memory_manager_t ** out) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   memory_manager_t * m;
   CHKERR(em_malloc((void **)&m, sizeof(memory_manager_t)));
   *out = m;
@@ -30,16 +30,16 @@ memory_manager_new(memory_manager_t ** out) {
   m->worklist_top = 0;
   m->state = MEMORY_MANAGER_STATE_IDLE;
   m->sweeper = MEMORY_MANAGER_HEAP_SIZE;
-  return EM_RESULT_OK;
+  //return EM_RESULT_OK;
  err:
   return errres;
 }
 
 em_result
-push_worklist(memory_manager_t * self, object_t * obj) {
-  if(!object_is_pointer(obj)) return EM_RESULT_OK;
-  if(obj == nullptr) return EM_RESULT_OK;
-  if(object_is_marked(obj)) return EM_RESULT_OK;
+memory_manager_push_worklist_uncheck_state(memory_manager_t * self, object_t * obj) {
+  if(!object_is_pointer(obj) // Not a pointer.
+     || obj == nullptr       // It is a null pointer.
+     || object_is_marked(obj)) return EM_RESULT_OK;
   object_mark(obj);
   //printf("marked: %d\n", ((int)obj - (int)self->space) / sizeof(object_t));
   if(MEMORY_MANAGER_WORK_LIST_SIZE == self->worklist_top)
@@ -48,14 +48,7 @@ push_worklist(memory_manager_t * self, object_t * obj) {
   self->worklist_top++;
   return EM_RESULT_OK;
 }
-
-em_result
-memory_manager_push_worklist(memory_manager_t * self, object_t * obj) {
-  if(self->state == MEMORY_MANAGER_STATE_MARK)
-    return push_worklist(self, obj);
-  else
-    return EM_RESULT_OK;
-}
+#define push_worklist(s, o) memory_manager_push_worklist_uncheck_state(s, o)
 
 em_result
 memory_manager_mark(memory_manager_t * self, int mark_limit) {
@@ -68,42 +61,52 @@ memory_manager_mark(memory_manager_t * self, int mark_limit) {
     case EMFRP_OBJECT_TUPLE1:
       CHKERR(push_worklist(self, cur->value.tuple1.i0));
       CHKERR(push_worklist(self, cur->value.tuple1.tag));
+      i += 1;
       break;
     case EMFRP_OBJECT_TUPLE2:
       CHKERR(push_worklist(self, cur->value.tuple2.i0));
       CHKERR(push_worklist(self, cur->value.tuple2.i1));
       CHKERR(push_worklist(self, cur->value.tuple2.tag));
+      i += 2;
       break;
     //case EMFRP_OBJECT_STACK:
     case EMFRP_OBJECT_TUPLEN:
       for(size_t i = 0; i < cur->value.tupleN.length; ++i)
 	CHKERR(push_worklist(self, object_tuple_ith(cur, i)));
       CHKERR(push_worklist(self, cur->value.tupleN.tag));
+      i += cur->value.tupleN.length;
       break;
-    case EMFRP_OBJECT_VARIABLE_TABLE: if(cur->value.variable_table.ptr != nullptr) {
-      list_t * li;
-      FOREACH_DICTIONARY(li, &(cur->value.variable_table.ptr->table)) {
-	void * v;
-        FOREACH_LIST(v, li) {
-          variable_t * n = (variable_t *)v;
-	  //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
-          CHKERR(push_worklist(self, n->value));
+    case EMFRP_OBJECT_VARIABLE_TABLE:
+      if(cur->value.variable_table.ptr != nullptr) {
+        list_t * li;
+        FOREACH_DICTIONARY(li, &(cur->value.variable_table.ptr->table)) {
+          void * v;
+          FOREACH_LIST(v, li) {
+            variable_t * n = (variable_t *)v;
+            //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
+            CHKERR(push_worklist(self, n->value));
+            i++;
+          }
+        }
+        if(cur->value.variable_table.ptr->parent != nullptr) {
+          CHKERR(push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref));
+          i++;
         }
       }
-      if(cur->value.variable_table.ptr->parent != nullptr)
-	return push_worklist(self, cur->value.variable_table.ptr->parent->this_object_ref);
       break;
-      } break;
     case EMFRP_OBJECT_FUNCTION: {
       switch(cur->value.function.kind) {
       case EMFRP_PROGRAM_KIND_AST:
-	return push_worklist(self, cur->value.function.function.ast.closure);
-      case EMFRP_PROGRAM_KIND_NOTHING: return EM_RESULT_OK;
-      case EMFRP_PROGRAM_KIND_CALLBACK: return EM_RESULT_OK;
+	CHKERR(push_worklist(self, cur->value.function.function.ast.closure));
+        break;
+      case EMFRP_PROGRAM_KIND_NOTHING:
+      case EMFRP_PROGRAM_KIND_CALLBACK: break;
       case EMFRP_PROGRAM_KIND_RECORD_CONSTRUCT:
-	return push_worklist(self, cur->value.function.function.construct.tag);
+	CHKERR(push_worklist(self, cur->value.function.function.construct.tag));
+        break;
       case EMFRP_PROGRAM_KIND_RECORD_ACCESS:
-	return push_worklist(self, cur->value.function.function.access.tag);
+	CHKERR(push_worklist(self, cur->value.function.function.access.tag));
+        break;
       default: DEBUGBREAK; break;
       }
       break;
@@ -135,8 +138,10 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
 	  switch(cur->value.function.kind) {
 	  case EMFRP_PROGRAM_KIND_AST:
 	    cur->value.function.function.ast.program->value.function.reference_count--;
-	    if(cur->value.function.function.ast.program->value.function.reference_count <= 0)
+	    if(cur->value.function.function.ast.program->value.function.reference_count <= 0) {
 	      parser_expression_free(cur->value.function.function.ast.program);
+              i += 10;
+            }
 	    break;
 	  case EMFRP_PROGRAM_KIND_NOTHING: break;
 	  case EMFRP_PROGRAM_KIND_CALLBACK: break;
@@ -156,7 +161,6 @@ memory_manager_sweep(memory_manager_t * self, int sweep_limit) {
     self->sweeper++;
   }
 }
-#include <stdio.h>
 em_result
 memory_manager_gc(struct machine_t * self,
                   int mark_limit, int sweep_limit) {
@@ -169,15 +173,12 @@ memory_manager_gc(struct machine_t * self,
       mm->worklist_top = 0;
       CHKERR(push_worklist(mm, self->stack));
       CHKERR(push_worklist(mm, machine_get_variable_table(self)->this_object_ref));
-      for (int i = 0; i < DICTIONARY_TABLE_SIZE; ++i) {
-          list_t * li = self->nodes.values[i];
-        while(li != nullptr) {
+      for (int i = 0; i < DICTIONARY_TABLE_SIZE; ++i)
+        for(list_t * li = self->nodes.values[i]; li != nullptr; li = LIST_NEXT(li)) {
           node_t * n = (node_t *)(&(li->value));
-	  //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
+          //printf("root: %s %d\n", n->name.buffer , ((int)n->value - (int)self->memory_manager->space) / sizeof(object_t));
           CHKERR(push_worklist(mm, n->value));
-          li = LIST_NEXT(li);
         }
-      }
       mm->state = MEMORY_MANAGER_STATE_MARK;
     }
     break;
@@ -201,7 +202,7 @@ memory_manager_gc(struct machine_t * self,
 
 em_result
 memory_manager_alloc(machine_t * self, object_t ** o) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   CHKERR(memory_manager_gc(self, MARK_LIMIT, SWEEP_LIMIT));
   if(self->memory_manager->remaining == 0)
     return EM_RESULT_OUT_OF_MEMORY;
@@ -211,8 +212,8 @@ memory_manager_alloc(machine_t * self, object_t ** o) {
   (*o)->kind = 0;
   if(&(self->memory_manager->space[self->memory_manager->sweeper]) <= *o)
     object_mark(*o);
-  //printf("allocated: %d\n", ((int)*o - (int)self->memory_manager->space) / sizeof(object_t));
-  return EM_RESULT_OK;
+  // printf("allocated: %d\n", ((int)*o - (int)self->memory_manager->space) / sizeof(object_t));
+  // return EM_RESULT_OK;
  err:
   return errres;
 }
