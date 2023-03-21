@@ -2,7 +2,7 @@
  * @file   ast.c
  * @brief  Emfrp AST implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/2/15
+ * @date   2023/3/21
  ------------------------------------------- */
 
 #include "ast.h"
@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 const char * const binary_op_table[] = {
-  "+", "-", "/", "*", "%", "<<", ">>", "<=", "<", ">=", ">", "=", "!=",
+  "+", "-", "/", "*", "%", "<<", ">>", "<=", "<", ">=", ">", "==", "!=",
   "&", "|", "^", "&&", "||"
 };
 
@@ -147,14 +147,16 @@ void
 go_deconstructor_print(deconstructor_t * dt) {
   switch(dt->kind) {
   case DECONSTRUCTOR_ANY:
-    printf("_");
+    fputs("_", stdout);
     break;
   case DECONSTRUCTOR_IDENTIFIER:
-    printf("%s", dt->value.identifier->buffer);
+    fputs(dt->value.identifier->buffer, stdout);
     break;
   case DECONSTRUCTOR_TUPLE:
-    if(dt->value.tuple.tag != nullptr)
-      printf("%s ", dt->value.tuple.tag->buffer);
+    if(dt->value.tuple.tag != nullptr) {
+      fputs(dt->value.tuple.tag->buffer, stdout);
+      fputs(" ", stdout);
+    }
     go_deconstructor_list_print(dt->value.tuple.data);
     break;
   case DECONSTRUCTOR_INTEGER:
@@ -172,13 +174,13 @@ go_deconstructor_print(deconstructor_t * dt) {
 void
 go_deconstructor_list_print(list_t /*<deconstructor_t>*/ * li) {
   if(li == nullptr) return;
-  printf("(");
+  fputs("(", stdout);
   go_deconstructor_print((deconstructor_t *)(&(li->value)));
   for(li = LIST_NEXT(li); li != nullptr; li = LIST_NEXT(li)) {
-    printf(", ");
+    fputs(", ", stdout);
     go_deconstructor_print((deconstructor_t *)(&(li->value)));
   }
-  printf(")");
+  fputs(")", stdout);
 }
 
 void
@@ -195,47 +197,51 @@ parser_toplevel_print(parser_toplevel_t * t) {
 
 void
 parser_node_print(parser_node_t * n) {
-  printf("node ");
+  fputs("node ", stdout);
   go_deconstructor_print(&(n->name));
   if(n->init_expression != nullptr) {
-    printf(" init[");
+    fputs(" init[", stdout);
     parser_expression_print(n->init_expression);
-    printf("]");
+    fputs("]", stdout);
   }
   if(n->as != nullptr) {
-    printf(" as %s", n->as->buffer);
+    fputs(" as ", stdout);
+    fputs(n->as->buffer, stdout);
   }
-  printf(" = ");
+  fputs(" = ", stdout);
   parser_expression_print(n->expression);
-  printf("\n");
+  fputs("\n", stdout);
 }
 
 void
 parser_data_print(parser_data_t * d) {
-  printf("data ");
+  fputs("data ", stdout);
   go_deconstructor_print(&(d->name));
-  printf(" = ");
+  fputs(" = ", stdout);
   parser_expression_print(d->expression);
 }
 
 void
 parser_function_print(parser_func_t * f) {
-  printf("func %s", f->name->buffer);
+  fputs("func ", stdout);
+  fputs(f->name->buffer, stdout);
   go_deconstructor_list_print(f->arguments);
-  printf(" = ");
+  fputs(" = ", stdout);
   parser_expression_print(f->expression);
 }
 
 void
 parser_record_print(parser_record_t * r) {
-  printf("record %s(", r->name.buffer);
-  list_t /*<string_t>*/ * li = r->accessors;
-  while(li != nullptr) {
+  fputs("record ", stdout);
+  fputs(r->name.buffer, stdout);
+  fputs("(", stdout);
+  for(list_t /*<string_t>*/ * li = r->accessors; li != nullptr; li = LIST_NEXT(li)) {
     string_t * v = (string_t *)(&(li->value));
-    printf(LIST_NEXT(li) == nullptr ? "%s" : "%s, ", v->buffer);
-    li = LIST_NEXT(li);
+    fputs(v->buffer, stdout);
+    if(LIST_NEXT(li) != nullptr)
+      fputs(", ", stdout);
   }
-  printf(")");
+  fputs(")", stdout);
 }
 
 void
@@ -247,7 +253,7 @@ parser_expression_print(parser_expression_t * e) {
     printf("%f", uninline_float(e));
 #endif
   else if(EXPR_KIND_IS_BOOLEAN(e))
-    fputs(EXPR_IS_TRUE(e) ? "true" : "false", stdout);
+    fputs(EXPR_IS_TRUE(e) ? "True" : "False", stdout);
   else if (e == nullptr)
     fputs("NIL", stdout);
   else {
@@ -259,98 +265,96 @@ parser_expression_print(parser_expression_t * e) {
     case EXPR_KIND_LAST_IDENTIFIER:
       printf("%s@last", e->value.identifier.buffer); break;
     case EXPR_KIND_IF:
-      printf("if ");
+      fputs("if ", stdout);
       parser_expression_print(e->value.ifthenelse.cond);
-      printf(" then ");
+      fputs(" then ", stdout);
       parser_expression_print(e->value.ifthenelse.then);
-      printf(" else ");
+      fputs(" else ", stdout);
       parser_expression_print(e->value.ifthenelse.otherwise);
       break;
     case EXPR_KIND_CASE:
       parser_expression_print(e->value.caseof.of);
-      printf(": ");
+      fputs(": ", stdout);
       {
-	parser_branch_list_t * bl = e->value.caseof.branches;
-	if(bl == nullptr) break;
-	go_deconstructor_print(bl->deconstruct);
-	printf(" -> ");
-	parser_expression_print(bl->body);
-	bl = bl->next;
-	while(bl != nullptr) {
-	  printf(", ");
-	  go_deconstructor_print(bl->deconstruct);
-	  printf(" -> ");
-	  parser_expression_print(bl->body);
-	  bl = bl->next;
-	}
-	break;
+        parser_branch_list_t * bl = e->value.caseof.branches;
+        if(bl == nullptr) break;
+        go_deconstructor_print(bl->deconstruct);
+        fputs(" -> ", stdout);
+        parser_expression_print(bl->body);
+        bl = bl->next;
+        for(;bl != nullptr; bl = bl->next) {
+          fputs(", ", stdout);
+          go_deconstructor_print(bl->deconstruct);
+          fputs(" -> ", stdout);
+          parser_expression_print(bl->body);
+        }
+        break;
       }
     case EXPR_KIND_BEGIN:
       printf(" { ");
       {
-	parser_branch_list_t * bl = e->value.begin.branches;
-	if(bl == nullptr) break;
-	if(bl->deconstruct != nullptr) {
-	  go_deconstructor_print(bl->deconstruct);
-	  printf(" <- ");
-	}
-	parser_expression_print(bl->body);
-	bl = bl->next;
-	while(bl != nullptr) {
-	  printf("; ");
-	  if(bl->deconstruct != nullptr) {
-	    go_deconstructor_print(bl->deconstruct);
-	    printf(" <- ");
-	  }
-	  parser_expression_print(bl->body);
-	  bl = bl->next;
-	}
-	printf(" } ");
-	break;
+        parser_branch_list_t * bl = e->value.begin.branches;
+        if(bl == nullptr) break;
+        if(bl->deconstruct != nullptr) {
+          go_deconstructor_print(bl->deconstruct);
+          printf(" <- ");
+        }
+        parser_expression_print(bl->body);
+        bl = bl->next;
+        for(;bl != nullptr; bl = bl->next) {
+          fputs("; ", stdout);
+          if(bl->deconstruct != nullptr) {
+            go_deconstructor_print(bl->deconstruct);
+            fputs(" <- ", stdout);
+          }
+          parser_expression_print(bl->body);
+        }
+        fputs(" } ", stdout);
+        break;
       }
     case EXPR_KIND_TUPLE:
-      printf("(");
-      parser_expression_tuple_list_t * tl = &(e->value.tuple);
-      while(tl != nullptr) {
+      fputs("(", stdout);
+      for(parser_expression_tuple_list_t * tl = &(e->value.tuple);
+          tl != nullptr; tl = tl->next) {
         parser_expression_print(tl->value);
         if(tl->next != nullptr)
-          printf(", ");
-        tl = tl->next;
+          fputs(", ", stdout);
       }
-      printf(")");
+      fputs(")", stdout);
       break;
     case EXPR_KIND_FUNCCALL:
-      printf("(");
+      fputs("(", stdout);
       parser_expression_print(e->value.funccall.callee);
-      printf(")");
+      fputs(")", stdout);
       {
-        printf("(");
+        fputs("(", stdout);
         parser_expression_tuple_list_t * tl = &(e->value.funccall.arguments);
         if(tl->value != nullptr) 
-        while(tl != nullptr) {
+          for(;tl != nullptr; tl = tl->next) {
           parser_expression_print(tl->value);
           if(tl->next != nullptr)
-            printf(", ");
-          tl = tl->next;
+            fputs(", ", stdout);
         }
-	printf(")");
+        fputs(")", stdout);
       }
       break;
     case EXPR_KIND_FUNCTION: {
-      printf("(fun");
+      fputs("(fun", stdout);
       go_deconstructor_list_print(e->value.function.arguments);
-      printf(" -> (");
+      fputs(" -> (", stdout);
       parser_expression_print(e->value.function.body);
-      printf("))");
+      fputs("))", stdout);
       break;
     }
     default: if (EXPR_KIND_IS_BIN_OP(e)) {
-	printf("(");
-	parser_expression_print(e->value.binary.lhs);
-	printf(" %s ", binary_op_table[e->kind >> PARSER_EXPRESSION_KIND_SHIFT]);
-	parser_expression_print(e->value.binary.rhs);
-	printf(")");
-	break;
+        fputs("(", stdout);
+        parser_expression_print(e->value.binary.lhs);
+        fputs(" ", stdout);
+        fputs(binary_op_table[e->kind >> PARSER_EXPRESSION_KIND_SHIFT], stdout);
+        fputs(" ", stdout);
+        parser_expression_print(e->value.binary.rhs);
+        fputs(")", stdout);
+        break;
       } else DEBUGBREAK;
     }
   }
