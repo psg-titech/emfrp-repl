@@ -102,10 +102,10 @@ branches <- b:branch _ ',' _ bs:branches { $$ = parser_expression_branch_prepend
           / b:branch                { $$ = b; }
 branch <- cd:case_deconstructor _ '->' _ e:expression { $$ = parser_expression_branch_new(cd, e); }
 
-case_deconstructor <- i:identifier _ '(' _ cd:case_deconstructors _ ')' { $$ = parser_deconstructor_new_tuple(i, cd); }
-                 / i:integer                                  { $$ = parser_deconstructor_new_integer(((int)(size_t)i) >> 2); }
-                 / i:identifier                               { $$ = parser_deconstructor_new_identifier(i); }
-                 / '(' _ cd:deconstructors _ ')'              { $$ = parser_deconstructor_new_tuple(nullptr, cd); }
+case_deconstructor <- i:integer                                      { $$ = parser_deconstructor_new_integer(((int)(size_t)i) >> 2); }
+                 / '(' _ cd:case_deconstructors _ ')'                { $$ = parser_deconstructor_new_tuple(nullptr, cd); }
+                 / i:identifier _ '(' _ cd:case_deconstructors _ ')' { $$ = parser_deconstructor_new_tuple(i, cd); }
+                 / i:identifier                                      { $$ = parser_deconstructor_new_identifier(i); }
 
 case_deconstructors <- cd:case_deconstructor (_ ',' _ cds:case_deconstructors)? { $$ = parser_deconstructors_prepend(cd, cds); }
 
