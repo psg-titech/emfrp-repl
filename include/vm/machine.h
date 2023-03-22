@@ -2,7 +2,7 @@
  * @file   machine.h
  * @brief  Emfrp REPL Machine
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/2/16
+ * @date   2023/3/22
  ------------------------------------------- */
 
 #pragma once
@@ -210,14 +210,26 @@ em_result machine_match(machine_t * self, list_t /*<deconstructor_t>*/ * nt, str
  */
 em_result machine_matches(machine_t * self, deconstructor_t * deconst, struct object_t * v);
 
-// ! Match the values to the deconstructor.
+// ! Test matching values to the deconstructors.
 /* !
  * \param self The machine
  * \param nt The deconstructor
- * \param v The tuple object
- * \return The result
+ * \param length The length of vs
+ * \param vs The pointer to the array of objects
+ * \return The result, if the matching is succeeded, it returns true.
  */
-em_result machine_test_match(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, struct object_t * v);
+bool
+machine_test_match(machine_t * self, list_t /*<deconstructor_t>*/ * nt, struct object_t ** vs, int length);
+
+// ! Test matching value to the deconstructor.
+/* !
+ * \param self The machine
+ * \param nt The deconstructor
+ * \param v The object
+ * \return The result, if the matching is succeeded, it returns true.
+ */
+bool
+machine_test_matches(machine_t * self, deconstructor_t * deconst, struct object_t * v);
 
 // ! Lookup a value of the variable.
 /* !

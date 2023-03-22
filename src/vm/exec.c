@@ -2,7 +2,7 @@
  * @file   exec.c
  * @brief  Emfrp REPL Interpreter Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/20
+ * @date   2023/3/22
  ------------------------------------------- */
 
 #include "vm/exec.h"
@@ -276,23 +276,7 @@ exec_ast_case(machine_t * m, parser_expression_t * v, exec_result_t * o) {
   CHKERR2(err2, machine_push(m, v_result));
   parser_branch_list_t * bl = v->value.caseof.branches;
   for(;bl != nullptr; bl = bl->next) {
-    switch(bl->deconstruct->kind) {
-    case DECONSTRUCTOR_IDENTIFIER: case DECONSTRUCTOR_ANY: goto match_ok;
-    case DECONSTRUCTOR_TUPLE:
-      if(machine_test_match(m, bl->deconstruct->value.tuple.tag, bl->deconstruct->value.tuple.data, v_result) == EM_RESULT_OK)
-	goto match_ok;
-      break;
-    case DECONSTRUCTOR_INTEGER:
-      if(object_is_integer(v_result) && bl->deconstruct->value.integer == object_get_integer(v_result))
-	goto match_ok;
-      break;
-#if EMFRP_ENABLE_FLOATING
-    case DECONSTRUCTOR_FLOAT: break;
-#endif
-    default: DEBUGBREAK; break;
-    }
-    continue;
-  match_ok: {
+    if(machine_test_matches(m, bl->deconstruct, v_result)) {
       CHKERR2(err2, machine_new_variable_table(m));
       CHKERR(machine_matches(m, bl->deconstruct, v_result));
       CHKERR(exec_ast_mono(m, bl->body, o));
@@ -300,7 +284,7 @@ exec_ast_case(machine_t * m, parser_expression_t * v, exec_result_t * o) {
       return errres; // Leave this function.
     }
   }
-  if(bl == nullptr) o->value = nullptr; // Nothing matches.
+  o->value = nullptr; // Nothing matches.
  err2: return errres;
 }
 

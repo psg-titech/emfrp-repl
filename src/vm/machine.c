@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/21
+ * @date   2023/3/22
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -45,7 +45,12 @@ machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
   case PARSER_TOPLEVEL_KIND_DATA: {
     parser_data_t * d = prog->value.data;
     CHKERR(exec_ast(self, d->expression, out));
-    CHKERR(machine_matches(self, &(d->name), *out));
+    if(machine_test_matches(self, &(d->name), *out)) {
+      CHKERR(machine_matches(self, &(d->name), *out));
+    } else {
+      errres = EM_RESULT_INVALID_ARGUMENT;
+      goto err;
+    }
     break;
   }
   case PARSER_TOPLEVEL_KIND_FUNC: {
@@ -201,71 +206,48 @@ machine_matches(machine_t * self, deconstructor_t * deconst, object_t * v) {
  err: return errres;
 }
 
-em_result
-machine_test_match(machine_t * self, string_t * tag, list_t /*<deconstructor_t>*/ * nt, object_t * v) {
-  em_result errres = EM_RESULT_OK;
-  int len = 0;
-  for(list_t * st = nt; st != nullptr; st = LIST_NEXT(st)) len++;
-  if(!object_is_pointer(v)) return EM_RESULT_INVALID_ARGUMENT;
-  if(v == nullptr) {
-    if(len == 0) return EM_RESULT_OK;
-    else return EM_RESULT_INVALID_ARGUMENT;
-  }
-  object_t ** obj = nullptr;
-  switch(object_kind(v)) {
-  case EMFRP_OBJECT_SYMBOL:
-    if(len != 0) return EM_RESULT_INVALID_ARGUMENT;
-    if(tag == nullptr) return EM_RESULT_INVALID_ARGUMENT;
-    return string_compare(tag, &(v->value.symbol.value)) ? EM_RESULT_OK : EM_RESULT_INVALID_ARGUMENT;
-  case EMFRP_OBJECT_TUPLE1:
-    if(len != 1) return EM_RESULT_INVALID_ARGUMENT;
-    if(tag != nullptr &&
-      (!object_is_pointer(v->value.tuple1.tag)
-       || v->value.tuple1.tag == nullptr
-       || object_kind(v->value.tuple1.tag) != EMFRP_OBJECT_SYMBOL
-       || !string_compare(tag, &(v->value.tuple1.tag->value.symbol.value))))
-      return EM_RESULT_INVALID_ARGUMENT;
-    obj = &(v->value.tuple1.i0);
-    break;
-  case EMFRP_OBJECT_TUPLE2:
-    if(len != 2) return EM_RESULT_INVALID_ARGUMENT;
-    if(tag != nullptr &&
-      (!object_is_pointer(v->value.tuple2.tag)
-       || v->value.tuple2.tag == nullptr
-       || object_kind(v->value.tuple2.tag) != EMFRP_OBJECT_SYMBOL
-       || !string_compare(tag, &(v->value.tuple2.tag->value.symbol.value))))
-      return EM_RESULT_INVALID_ARGUMENT;
-    obj = &(v->value.tuple2.i0);
-    break;
-  case EMFRP_OBJECT_TUPLEN:
-    if(len != v->value.tupleN.length) return EM_RESULT_INVALID_ARGUMENT;
-    if(tag != nullptr &&
-      (!object_is_pointer(v->value.tupleN.tag)
-       || v->value.tupleN.tag == nullptr
-       || object_kind(v->value.tupleN.tag) != EMFRP_OBJECT_SYMBOL
-       || !string_compare(tag, &(v->value.tupleN.tag->value.symbol.value))))
-      return EM_RESULT_INVALID_ARGUMENT;
-    obj = v->value.tupleN.data;
-    break;
-  }
-  int i = 0;
-  for(list_t * l = nt; l != nullptr; l = LIST_NEXT(l), i++) {
-    deconstructor_t * dt = (deconstructor_t *)&(l->value);
-    switch(dt->kind) {
-    case DECONSTRUCTOR_IDENTIFIER: break;
-    case DECONSTRUCTOR_TUPLE: CHKERR(machine_test_match(self, dt->value.tuple.tag, dt->value.tuple.data, obj[i]));  break;
-    case DECONSTRUCTOR_INTEGER:
-      return (!object_is_integer(obj[i]) || dt->value.integer != object_get_integer(obj[i])) ? EM_RESULT_INVALID_ARGUMENT : EM_RESULT_OK;
-#if EMFRP_ENABLE_FLOATING
-    case DECONSTRUCTOR_FLOATING:
-#endif
-    default: DEBUGBREAK; continue;
-    }
-  }
- err:
-  return errres;
+bool
+machine_test_match(machine_t * self, list_t /*<deconstructor_t>*/ * nt, object_t ** vs, int length) {
+  for(int len = 0; nt != nullptr || len != length; ++len, nt = LIST_NEXT(nt))
+    if(nt == nullptr || len == length
+       || !machine_test_matches(self, (deconstructor_t *)(&(nt->value)), vs[len])) return false;
+  return true;
 }
 
+bool
+machine_test_matches(machine_t * self, deconstructor_t * deconst, object_t * v) {
+  switch(deconst->kind) {
+  case DECONSTRUCTOR_IDENTIFIER:
+  case DECONSTRUCTOR_ANY: return true;
+  case DECONSTRUCTOR_TUPLE:
+    if(!object_is_pointer(v) || v == nullptr) return false;
+    switch(object_kind(v)) {
+    case EMFRP_OBJECT_SYMBOL:
+      return !(deconst->value.tuple.tag == nullptr
+               || deconst->value.tuple.data != nullptr
+               || !string_compare(deconst->value.tuple.tag, &(v->value.symbol.value)));
+      break;
+    case EMFRP_OBJECT_TUPLE1:
+      if(!machine_match_symbol(v->value.tuple1.tag, deconst->value.tuple.tag)) return false;
+      return machine_test_match(self, deconst->value.tuple.data, &(v->value.tuple1.i0), 1);
+    case EMFRP_OBJECT_TUPLE2:
+      if(!machine_match_symbol(v->value.tuple2.tag, deconst->value.tuple.tag)) return false;
+      return machine_test_match(self, deconst->value.tuple.data, &(v->value.tuple2.i0), 2);
+    case EMFRP_OBJECT_TUPLEN:
+      if(!machine_match_symbol(v->value.tupleN.tag, deconst->value.tuple.tag)) return false;
+      return machine_test_match(self, deconst->value.tuple.data, v->value.tupleN.data, v->value.tupleN.length);
+    default: return false;
+    }
+    break;
+  case DECONSTRUCTOR_INTEGER:
+    return !(!object_is_integer(v) || deconst->value.integer != object_get_integer(v));
+#if EMFRP_ENABLE_FLOATING
+  case DECONSTRUCTOR_FLOATING:
+#endif
+  default: DEBUGBREAK; break;
+  }
+  return false;
+}
 
 bool
 string_compare2(void * l, void * r) {  return string_compare(*((string_t **)l), (string_t *)r); }
