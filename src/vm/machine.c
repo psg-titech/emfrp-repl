@@ -2,7 +2,7 @@
  * @file   machine.c
  * @brief  Emfrp REPL Machine Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/2/16
+ * @date   2023/3/21
  ------------------------------------------- */
 
 #include <stdio.h>
@@ -39,23 +39,22 @@ machine_new(machine_t * out) {
 em_result
 machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
   em_result errres = EM_RESULT_OK;
+  *out = nullptr;
   switch(prog->kind) {
   case PARSER_TOPLEVEL_KIND_EXPR: return exec_ast(self, prog->value.expression, out);
   case PARSER_TOPLEVEL_KIND_DATA: {
     parser_data_t * d = prog->value.data;
-    object_t * o = nullptr;
-    CHKERR(exec_ast(self, d->expression, &o));
-    CHKERR(machine_matches(self, &(d->name), o));
+    CHKERR(exec_ast(self, d->expression, out));
+    CHKERR(machine_matches(self, &(d->name), *out));
     break;
   }
   case PARSER_TOPLEVEL_KIND_FUNC: {
     parser_func_t * f = prog->value.func;
     parser_expression_t * e = parser_expression_new_function(f->arguments, f->expression);
-    if(e == nullptr) return EM_RESULT_OUT_OF_MEMORY;
-    object_t * o = nullptr;
-    CHKERR(machine_alloc(self, &o));
-    CHKERR(object_new_function_ast(o, machine_get_variable_table(self)->this_object_ref, e));
-    CHKERR(machine_assign_variable(self, f->name, o));
+    TEST_AND_ERROR(e == nullptr, EM_RESULT_OUT_OF_MEMORY);
+    CHKERR(machine_alloc(self, out));
+    CHKERR(object_new_function_ast(*out, machine_get_variable_table(self)->this_object_ref, e));
+    CHKERR(machine_assign_variable(self, f->name, *out));
     break;
   }
   case PARSER_TOPLEVEL_KIND_NODE: {
@@ -63,31 +62,32 @@ machine_exec(machine_t * self, parser_toplevel_t * prog, object_t ** out) {
     return machine_add_node_ast(self, &_, prog->value.node);
   }
   case PARSER_TOPLEVEL_KIND_RECORD: {
-    size_t len = 0;
-    list_t /*<string_t*>*/ * li = prog->value.record->accessors;
-    for(;li != nullptr; li = LIST_NEXT(li)) len++;
     object_t * tag = nullptr;
-    string_t tagname;
-    CHKERR(machine_alloc(self, &tag));
-    CHKERR(string_copy(&tagname, &(prog->value.record->name)));
-    CHKERR(object_new_symbol(tag, tagname));
-    CHKERR(machine_alloc(self, out));
-    CHKERR(object_new_function_constructor(*out, tag, len));
-    li = prog->value.record->accessors;
-    len = 0;
-    while(li != nullptr) {
-      string_t * v = (string_t *)(&(li->value));
+    { // Construct the tag.
+      string_t tagname;
+      CHKERR(machine_alloc(self, &tag));
+      CHKERR(string_copy(&tagname, &(prog->value.record->name)));
+      CHKERR(object_new_symbol(tag, tagname));
+    }
+    // Construct the accessors.
+    size_t len = 0;
+    for(list_t /*<string_t*>*/ * li = prog->value.record->accessors;
+        li != nullptr; li = LIST_NEXT(li), len++) {
       object_t * o = nullptr;
       CHKERR(machine_alloc(self, &o));
       CHKERR(object_new_function_accessor(o, tag, len));
-      CHKERR(machine_assign_variable(self, v, o));
-      len++;
-      li = li->next;
+      CHKERR(machine_assign_variable(self, (string_t *)(&(li->value)), o));
     }
+    // Construct the constructors.
+    CHKERR(machine_alloc(self, out));
+    CHKERR(object_new_function_constructor(*out, tag, len));
     CHKERR(machine_assign_variable(self, &(prog->value.record->name), *out));
+    break;
   }
   }
+  return EM_RESULT_OK;
  err:
+  *out = nullptr;
   return errres;
 }
 
@@ -97,17 +97,16 @@ machine_push(machine_t * self, object_t * obj) {
   em_result errres = EM_RESULT_OK;
 #if DEBUG
   if(object_kind(self->stack.kind) != EMFRP_OBJECT_STACK) {
-    printf("Illegal stack kind.\n");
+    fputs("Illegal stack kind.\n", stdout);
     DEBUGBREAK;
   }
 #endif
   object_t * st = self->stack;
   int32_t capacity = 0;
-  CHKERR(object_get_int(st->value.stack.capacity, &capacity))
-  if(st->value.stack.length == capacity) {
-    CHKERR(em_reallocarray((void **)&(st->value.stack.data), (void *)(st->value.stack.data), capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
-    for(int i = 0; i < MACHINE_STACK_SIZE; ++i)
-      object_tuple_ith(st, i+capacity) = nullptr;
+  CHKERR(object_get_int(st->value.stack.capacity, &capacity));
+  if(st->value.stack.length >= capacity) {
+    CHKERR(em_reallocarray((void **)&(st->value.stack.data),
+                           (void *)(st->value.stack.data), capacity + MACHINE_STACK_SIZE, sizeof(object_t *)));
     CHKERR(object_new_int(&(st->value.stack.capacity), capacity + MACHINE_STACK_SIZE));
   }
   st->value.stack.data[st->value.stack.length] = obj;
@@ -122,11 +121,11 @@ machine_pop(machine_t * self, object_t ** obj) {
   object_t * st = self->stack;
 #if DEBUG
   if(object_kind(st->kind) != EMFRP_OBJECT_STACK) {
-    printf("Illegal stack kind.\n");
+    fputs("Illegal stack kind.\n", stdout);
     DEBUGBREAK;
   }
 #endif
-  if (st->value.stack.length == 0) return EM_RESULT_STACK_OVERFLOW;
+  TEST_AND_ERROR(st->value.stack.length == 0, EM_RESULT_STACK_OVERFLOW);
   CHKERR(machine_mark_gray(self, st->value.stack.data[st->value.stack.length - 1]));
   if(obj != nullptr)
     *obj = st->value.stack.data[st->value.stack.length - 1];
@@ -140,13 +139,9 @@ machine_pop(machine_t * self, object_t ** obj) {
 em_result
 machine_match(machine_t * self, list_t /*<deconstructor_t>*/ * nt, object_t ** vs, int length) {
   em_result errres = EM_RESULT_OK;
-  int len = 0;
-  while(1) {
-    if(nt == nullptr && len == length) return EM_RESULT_OK;
-    if(nt == nullptr || len == length) return EM_RESULT_INVALID_ARGUMENT;
+  for(int len = 0; nt != nullptr || len != length; ++len, nt = LIST_NEXT(nt)) {
+    TEST_AND_ERROR(nt == nullptr || len == length, EM_RESULT_INVALID_ARGUMENT);
     CHKERR(machine_matches(self, (deconstructor_t *)(&(nt->value)), vs[len]));
-    nt = LIST_NEXT(nt);
-    len++;
   }
  err:
   return errres;
@@ -159,42 +154,39 @@ machine_matches(machine_t * self, deconstructor_t * deconst, object_t * v) {
   case DECONSTRUCTOR_IDENTIFIER: CHKERR(machine_assign_variable(self, deconst->value.identifier, v)); break;
   case DECONSTRUCTOR_ANY: break;
   case DECONSTRUCTOR_TUPLE:
-    if(!object_is_pointer(v) || v == nullptr) {
-      errres = EM_RESULT_INVALID_ARGUMENT;
-      goto err;
-    }
+    TEST_AND_ERROR(!object_is_pointer(v) || v == nullptr, EM_RESULT_INVALID_ARGUMENT);
     switch(object_kind(v)) {
     case EMFRP_OBJECT_SYMBOL:
       if(deconst->value.tuple.tag != nullptr &&
-	 !string_compare(deconst->value.tuple.tag, &(v->value.tuple1.tag->value.symbol.value)))
-	return EM_RESULT_INVALID_ARGUMENT;
+         !string_compare(deconst->value.tuple.tag, &(v->value.tuple1.tag->value.symbol.value)))
+        return EM_RESULT_INVALID_ARGUMENT;
       if(deconst->value.tuple.data != nullptr) return EM_RESULT_INVALID_ARGUMENT;
       break;
     case EMFRP_OBJECT_TUPLE1:
       if(deconst->value.tuple.tag != nullptr &&
-	 (!object_is_pointer(v->value.tuple1.tag)
-	  || v->value.tuple1.tag == nullptr
-	  || object_kind(v->value.tuple1.tag) != EMFRP_OBJECT_SYMBOL
-	  || !string_compare(deconst->value.tuple.tag, &(v->value.tuple1.tag->value.symbol.value))))
-	return EM_RESULT_INVALID_ARGUMENT;
+         (!object_is_pointer(v->value.tuple1.tag)
+          || v->value.tuple1.tag == nullptr
+          || object_kind(v->value.tuple1.tag) != EMFRP_OBJECT_SYMBOL
+          || !string_compare(deconst->value.tuple.tag, &(v->value.tuple1.tag->value.symbol.value))))
+        return EM_RESULT_INVALID_ARGUMENT;
       CHKERR(machine_match(self, deconst->value.tuple.data, &(v->value.tuple1.i0), 1));
       break;
     case EMFRP_OBJECT_TUPLE2:
       if(deconst->value.tuple.tag != nullptr &&
-	 (!object_is_pointer(v->value.tuple2.tag)
-	  || v->value.tuple2.tag == nullptr
-	  || object_kind(v->value.tuple2.tag) != EMFRP_OBJECT_SYMBOL
-	  || !string_compare(deconst->value.tuple.tag, &(v->value.tuple2.tag->value.symbol.value))))
-	return EM_RESULT_INVALID_ARGUMENT;
+         (!object_is_pointer(v->value.tuple2.tag)
+          || v->value.tuple2.tag == nullptr
+          || object_kind(v->value.tuple2.tag) != EMFRP_OBJECT_SYMBOL
+          || !string_compare(deconst->value.tuple.tag, &(v->value.tuple2.tag->value.symbol.value))))
+        return EM_RESULT_INVALID_ARGUMENT;
       CHKERR(machine_match(self, deconst->value.tuple.data, &(v->value.tuple2.i0), 2));
       break;
     case EMFRP_OBJECT_TUPLEN:
       if(deconst->value.tuple.tag != nullptr &&
-	 (!object_is_pointer(v->value.tupleN.tag)
-	  || v->value.tupleN.tag == nullptr
-	  || object_kind(v->value.tupleN.tag) != EMFRP_OBJECT_SYMBOL
-	  || !string_compare(deconst->value.tuple.tag, &(v->value.tupleN.tag->value.symbol.value))))
-	return EM_RESULT_INVALID_ARGUMENT;
+         (!object_is_pointer(v->value.tupleN.tag)
+          || v->value.tupleN.tag == nullptr
+          || object_kind(v->value.tupleN.tag) != EMFRP_OBJECT_SYMBOL
+          || !string_compare(deconst->value.tuple.tag, &(v->value.tupleN.tag->value.symbol.value))))
+        return EM_RESULT_INVALID_ARGUMENT;
       CHKERR(machine_match(self, deconst->value.tuple.data, v->value.tupleN.data, v->value.tupleN.length));
       break;
     }
@@ -286,9 +278,10 @@ go_check_dependencies(list_t ** dependencies, node_or_tuple_t * nt) {
   case NODE_OR_TUPLE_NODE: {
     if(nt->value.node == nullptr) return; // itself
     list_t * removed;
-    string_t * n = &(nt->value.node->name);
-    while((removed = list_remove(dependencies, string_compare2, n)) != nullptr)
+    do {
+      removed = list_remove(dependencies, string_compare2, &(nt->value.node->name));
       em_free(removed);
+    } while(removed != nullptr);
     return;
   }
   case NODE_OR_TUPLE_TUPLE:
@@ -300,39 +293,39 @@ go_check_dependencies(list_t ** dependencies, node_or_tuple_t * nt) {
 
 em_result
 check_dependencies(machine_t * self, parser_expression_t * prog, list_t ** executionlist_head, list_t *** whereto_insert) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   list_t * /*<exec_sequence_t *>*/ cur = *executionlist_head;
-  list_t ** p = executionlist_head;
   list_t * /*<string_t *>*/ dependencies;
   CHKERR(list_default(&dependencies));
   CHKERR(get_dependencies_ast(self, prog, &dependencies));
   // Search where to insert.
   // Inserted after all dependencies are satisfied.
-  while(!LIST_IS_EMPTY(&dependencies)) {
-    list_t * removed;
+  list_t ** p = executionlist_head;
+  for(;!LIST_IS_EMPTY(&dependencies); p = &((*p)->next), cur = LIST_NEXT(cur)) {
     if(LIST_IS_EMPTY(&cur)) { // dependencies are not satisfied.
       list_free(&dependencies);
       return EM_RESULT_MISSING_IDENTIFIER;
     }
     exec_sequence_t * n = (exec_sequence_t *)(&(cur->value));
     if(n->node_definition != nullptr) {
-      while((removed = list_remove(&dependencies, string_compare2, &(n->node_definition->name))) != nullptr)
-	em_free(removed);
+      list_t * removed = (void*)1;
+      do {
+        removed = list_remove(&dependencies, string_compare2, &(n->node_definition->name));
+        em_free(removed);
+      } while(removed != nullptr);
     }
     if(n->node_definitions != nullptr)
       go_check_dependencies(&dependencies, n->node_definitions);
-    p = &((*p)->next);
-    cur = LIST_NEXT(cur);
   }
   *whereto_insert = p;
-  return EM_RESULT_OK;
+  // return EM_RESULT_OK;
  err:
   return errres;
 }
 
 bool has_cyclicreference(string_t * newnode_str, list_t * executionlist_head, list_t * cur) {
   // CHECK CYCLIC DEPENDENCIES!
-  for(list_t * pcur = executionlist_head; pcur != cur; pcur = pcur->next) {
+  for(list_t * pcur = executionlist_head; pcur != cur; pcur = LIST_NEXT(pcur)) {
     exec_sequence_t * es = (exec_sequence_t *)(&(pcur->value));
     if(exec_sequence_marked_modified(es)) continue; // Skip!
     if(exec_sequence_program_kind(es) == EMFRP_PROGRAM_KIND_AST
@@ -346,21 +339,17 @@ bool has_cyclicreference2(deconstructor_t * newnode_str, list_t * executionlist_
   switch(newnode_str->kind) {
   case DECONSTRUCTOR_IDENTIFIER:
     return has_cyclicreference(newnode_str->value.identifier, executionlist_head, cur);
-  case DECONSTRUCTOR_TUPLE: {
-    bool ret = false;
-    for(list_t * li = newnode_str->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) {
-      deconstructor_t * dt = (deconstructor_t *)(&(li->value));
-      ret |= has_cyclicreference2(dt, executionlist_head, cur);
-    }
-    return ret;
-  }
+  case DECONSTRUCTOR_TUPLE:
+    for(list_t * li = newnode_str->value.tuple.data; li != nullptr; li = LIST_NEXT(li))
+      if(has_cyclicreference2((deconstructor_t *)(&(li->value)), executionlist_head, cur)) return true;
+    return false;
   default: DEBUGBREAK; return false;
   }
 }
 
 em_result
 machine_add_node(machine_t * self, string_t str, node_t ** node_ptr) {
-  em_result errres;
+  em_result errres = EM_RESULT_OK;
   if(dictionary_get(&(self->nodes), (void**)node_ptr,(size_t(*)(void *)) string_hash, node_compare, &str))
     return EM_RESULT_OK; // Do nothing.
   node_t new_node = { 0 };
@@ -373,8 +362,7 @@ machine_add_node(machine_t * self, string_t str, node_t ** node_ptr) {
 
 void
 machine_cleanup(queue_t /*<exec_sequence_t>*/ * execSeq) {
-  list_t ** cur = &(execSeq->head);
-  while(*cur != nullptr) {
+  for(list_t ** cur = &(execSeq->head); *cur != nullptr; ) {
     exec_sequence_t * es = (exec_sequence_t *)&((*cur)->value);
     if(!exec_sequence_marked_modified(es)) goto next; // Not modified, skip.
     exec_sequence_unmark_modified(es);
@@ -421,21 +409,18 @@ em_result
 machine_add_nodes(machine_t * self, deconstructor_t * dt, node_or_tuple_t * node_ptr) {
   em_result errres = EM_RESULT_OK;
   switch(dt->kind) {
-  case DECONSTRUCTOR_IDENTIFIER: { // string -> node
+  case DECONSTRUCTOR_IDENTIFIER: // string -> node
     CHKERR(machine_add_node(self, *(dt->value.identifier), &(node_ptr->value.node)));
     node_ptr->kind = NODE_OR_TUPLE_NODE;
     break;
-  }
   case DECONSTRUCTOR_TUPLE: { // list -> array
     int cnt = 0;
-    list_t * li;
-    for(li = dt->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) cnt++;
+    for(list_t * li = dt->value.tuple.data; li != nullptr; li = LIST_NEXT(li)) cnt++;
     node_ptr->kind = NODE_OR_TUPLE_TUPLE;
     CHKERR(arraylist_new(&(node_ptr->value.tuple), sizeof(node_or_tuple_t), cnt));
-    li = dt->value.tuple.data;
-    for(int i = 0; i < cnt; ++i, li = LIST_NEXT(li)) {
+    list_t * li = dt->value.tuple.data;
+    for(int i = 0; i < cnt; ++i, li = LIST_NEXT(li))
       CHKERR(machine_add_nodes(self, (deconstructor_t *)(&(li->value)), &(((node_or_tuple_t *)(node_ptr->value.tuple.buffer))[i])));
-    }
     break;
   }
   default: DEBUGBREAK; break;
@@ -451,13 +436,16 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
   exec_sequence_t new_exec_seq = {0};
   exec_sequence_t * new_entry;
   journal_t * journal = nullptr;
-  if(n->as != nullptr) {
+  // Remove the previous definition.
+  if(n->as != nullptr)
     CHKERR(machine_remove_previous_definition2(self, &journal, n->as));
-  }
   CHKERR(machine_remove_previous_definition(self, &journal, &(n->name)));
+  // Allocate the new exec_sequence.
   CHKERR(exec_sequence_new_mono_ast(&new_exec_seq, n->expression, nullptr));
+  // Dependency Check
   CHKERR(check_dependencies(self, n->expression, &(self->execution_list.head), &whereto_insert));
-  if(journal != nullptr // If it contains already-defined nodes
+  // If it contains already-defined nodes, Test the dependency and Try topological sort.
+  if(journal != nullptr
      && has_cyclicreference2(&(n->name), self->execution_list.head, *whereto_insert)
      && (n->as == nullptr || has_cyclicreference(n->as, self->execution_list.head, *whereto_insert))) {
     if(topological_sort(self, &(self->execution_list.head), &(self->execution_list.last)) != EM_RESULT_OK) {
@@ -465,28 +453,28 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
       goto err;
     }
   }
+  // Adding the new exec_sequence.
   CHKERR(list_add4(whereto_insert, exec_sequence_t, &new_exec_seq, (void**)&new_entry));
+  // Update the last node.
   if(LIST_IS_EMPTY(&((*whereto_insert)->next)))
     self->execution_list.last = &((*whereto_insert)->next);
-  if(out != nullptr) *out = new_entry;
   switch(n->name.kind) {
-  case DECONSTRUCTOR_IDENTIFIER: { // Single name.
+  case DECONSTRUCTOR_IDENTIFIER: // Single name.
     CHKERR2(err2, machine_add_node(self, *(n->name.value.identifier), &(new_entry->node_definition)));
     break;
-  }
-  case DECONSTRUCTOR_TUPLE: {
+  case DECONSTRUCTOR_TUPLE:
     CHKERR2(err2, em_malloc((void**)(&(new_entry->node_definitions)), sizeof(node_or_tuple_t)));
     CHKERR2(err2, machine_add_nodes(self, &(n->name), new_entry->node_definitions));
-    if(n->as != nullptr) {
+    if(n->as != nullptr)
       CHKERR2(err2, machine_add_node(self, *(n->as), &(new_entry->node_definition)));
-    }
     break;
-  }
   default: DEBUGBREAK; break;
   }
+  // Clean up the journal.
   if(journal != nullptr) {
     machine_cleanup(&(self->execution_list));
     journal_free(&journal);
+    journal = nullptr;
   }
   if(n->init_expression != nullptr) {
     object_t * obj = nullptr;
@@ -494,8 +482,9 @@ machine_add_node_ast(machine_t * self, exec_sequence_t ** out, parser_node_t * n
     if(res) {
       // TODO: last failure.
     }
-    return exec_sequence_update_value_given_object(self, new_entry, obj);
+    CHKERR(exec_sequence_update_value_given_object(self, new_entry, obj));
   }
+  if(out != nullptr) *out = new_entry;
   return EM_RESULT_OK;
  err2:
   // TODO: Out of Memory failure.
@@ -518,11 +507,10 @@ machine_add_node_callback(machine_t * self, string_t str, exec_callback_t callba
     machine_cleanup(&(self->execution_list));
     journal_free(&journal);
   }
-  if(callback == nullptr) {
-    CHKERR(exec_sequence_new_mono_nothing(&new_exec_seq, node_ptr));
-  } else {
-    CHKERR(exec_sequence_new_mono_callback(&new_exec_seq, callback, node_ptr));
-  }
+  CHKERR(exec_sequence_new_mono_callback(&new_exec_seq, callback, node_ptr));
+  // CHKERR(callback == nullptr
+  //        ? exec_sequence_new_mono_nothing(&new_exec_seq, node_ptr)
+  //        : exec_sequence_new_mono_callback(&new_exec_seq, callback, node_ptr));
   CHKERR(list_add2(&(self->execution_list.head), exec_sequence_t, &new_exec_seq));
   if(LIST_IS_EMPTY(&(self->execution_list.head->next)))
     self->execution_list.last = &(self->execution_list.head->next);
@@ -544,16 +532,18 @@ macihne_is_defined(machine_t * self, string_t * name) {
 em_result
 machine_indicate(machine_t * self, string_t * names, int count_names) {
   // names is currently ignored. i.e. All of nodes are executed.
-  em_result errres;
-  list_t * /*<exec_sequence_t>*/ cur = self->execution_list.head;
-  for(;!LIST_IS_EMPTY(&cur); cur = LIST_NEXT(cur)) {
+  em_result errres = EM_RESULT_OK;
+  
+  for(list_t * /*<exec_sequence_t>*/ cur = self->execution_list.head;
+      !LIST_IS_EMPTY(&cur); cur = LIST_NEXT(cur))
     CHKERR(exec_sequence_update_last(self, (exec_sequence_t *)(&(cur->value))));
+  
+  for(list_t * /*<exec_sequence_t>*/ cur = self->execution_list.head;
+      !LIST_IS_EMPTY(&cur); cur = LIST_NEXT(cur)) {
+    em_result result = exec_sequence_update_value(self, (exec_sequence_t *)(&(cur->value)));
+    // TODO: result
   }
-  for(cur = self->execution_list.head; !LIST_IS_EMPTY(&cur); cur = LIST_NEXT(cur)) {
-    exec_sequence_t * es = (exec_sequence_t *)(&(cur->value));
-    em_result result = exec_sequence_update_value(self, es);
-  }
-  return EM_RESULT_OK;
+  // return EM_RESULT_OK;
  err:
   return errres;
 }
@@ -592,24 +582,29 @@ err:
 
 void
 machine_debug_print_definitions(machine_t * self) {
-  list_t * cur = self->execution_list.head;
-  printf("=== EXECUTION LIST ===\n");
-  while(cur != nullptr) {
+  fputs("=== EXECUTION LIST ===\n", stdout);
+  for(list_t * /*<exec_sequence_t>*/ cur = self->execution_list.head;
+      cur != nullptr; cur = LIST_NEXT(cur)) {
     exec_sequence_t * n = (exec_sequence_t *)(&(cur->value));
     if(n->node_definitions == nullptr) {
       if(n->node_definition == nullptr)
-	printf("Node<INVALID!>\n");
-      else
-	printf("Node<%s>\n", n->node_definition->name.buffer);
+        fputs("Node<INVALID!>\n", stdout);
+      else {
+        fputs("Node<", stdout);
+        fputs(n->node_definition->name.buffer, stdout);
+        fputs(">\n", stdout);
+      }
     } else {
-      printf("Node<");
+      fputs("Node<", stdout);
       node_or_tuple_debug_print(n->node_definitions);
       if(n->node_definition == nullptr)
-	printf(">\n");
-      else
-	printf("as %s>\n", n->node_definition->name.buffer);
+        fputs(">\n", stdout);
+      else {
+        fputs("as ", stdout);
+        fputs( n->node_definition->name.buffer, stdout);
+        fputs(">\n", stdout);
+      }
     }
-    cur = LIST_NEXT(cur);
   }
-  printf("======================\n");
+  fputs("======================\n", stdout);
 }
