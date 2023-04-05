@@ -25,5 +25,4 @@ const char * const EM_RESULT_STR_TABLE[] = {
   "Type Mismatch",
   "Missing Identifier",
   "Cyclic Referencing",
-  "Parse Error"
-};
+  "Parse Error"};

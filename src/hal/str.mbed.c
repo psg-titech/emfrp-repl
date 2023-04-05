@@ -8,11 +8,13 @@
 #include "str.mbed.h"
 #include "stdlib.h"
 
-char *strdup(const char * s) {
-    unsigned int len = strlen(s);
-    char * ret = (char *)malloc(sizeof(char) * (len + 1));
-    memcpy(ret, s, len);
-    ret[len+1] = '\0';
-    return ret;
+char *
+strdup(const char * s)
+{
+  unsigned int len = strlen(s);
+  char *       ret = (char *)malloc(sizeof(char) * (len + 1));
+  memcpy(ret, s, len);
+  ret[len + 1] = '\0';
+  return ret;
 }
 #endif

@@ -8,6 +8,7 @@
 #include "vm/node_t.h"
 
 void
-node_deep_free(node_t * v) {
+node_deep_free(node_t * v)
+{
   string_free(&(v->name));
 }

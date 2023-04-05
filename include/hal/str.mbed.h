@@ -7,7 +7,8 @@
 #if defined(__MBED__)
 #pragma once
 #if _cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 #include "stdio.h"
 #define strnlen(str, noe) strlen(str)

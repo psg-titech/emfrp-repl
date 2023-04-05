@@ -11,158 +11,168 @@
 #include <stdbool.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif /* __cplusplus */
 
-// ! Linked List(Stack)
-typedef struct list_t {
-  // ! Next
-  struct list_t * next;
-  // ! Value(phantom object.)
-  void * value;
-} list_t;
+  // ! Linked List(Stack)
+  typedef struct list_t
+  {
+    // ! Next
+    struct list_t * next;
+    // ! Value(phantom object.)
+    void * value;
+  } list_t;
 
-// ! Queue
-typedef struct queue_t {
-  // Head
-  struct list_t * head;
-  // A pointer to the last list_t::value.
-  struct list_t ** last;
-} queue_t;
+  // ! Queue
+  typedef struct queue_t
+  {
+    // Head
+    struct list_t * head;
+    // A pointer to the last list_t::value.
+    struct list_t ** last;
+  } queue_t;
 
-// ! Default constructor of list_t.
-/* !
+  // ! Default constructor of list_t.
+  /* !
  * /param out The result
 p * /return The status code
  */
-static inline em_result list_default(list_t ** out) {
-  *out = nullptr;
-  return EM_RESULT_OK;
-}
+  static inline em_result
+  list_default(list_t ** out)
+  {
+    *out = nullptr;
+    return EM_RESULT_OK;
+  }
 
-// ! Adding an item to the list.
-/* !
+  // ! Adding an item to the list.
+  /* !
  * /param out The list to add to
  * /param value_size sizeof(value)
  * /param value The value to be added
  * /return The status code
  */
-em_result list_add(list_t ** out, size_t value_size, void * value);
+  em_result list_add(list_t ** out, size_t value_size, void * value);
 #define list_add2(out, ty, val) list_add(out, sizeof(ty), val)
 
-// ! Adding an item to the list.
-/* !
+  // ! Adding an item to the list.
+  /* !
  * /param out The list to add to
  * /param value_size sizeof(value)
  * /param value The value to be added
  * /param entry_ptr The pointer of copied buffer
  * /return The status code
  */
-em_result list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr);
+  em_result list_add3(list_t ** out, size_t value_size, void * value, void ** entry_ptr);
 #define list_add4(out, ty, val, entry_ptr) list_add3(out, sizeof(ty), val, entry_ptr)
 
-// ! Search an item.
-/* !
+  // ! Search an item.
+  /* !
  * /param self The list
  * /param out The result
  * /param comparer The compare function
  * /param search_value Passed to comparer as the 2nd argument.
  * /return Whether found or not
  */
-bool list_search(list_t * self, void ** out, bool(comparer(void *, void *)), void * search_value);
+  bool list_search(list_t * self, void ** out, bool(comparer(void *, void *)), void * search_value);
 
-// ! Test an item.
-/* !
+  // ! Test an item.
+  /* !
  * /param self The list
  * /param comparer The compare function
  * /param search_value Passed to comparer as the 2nd argument.
  * /return Whether found or not
  */
-bool list_contains(list_t * self, bool(comparer(void *, void *)), void * search_value);
+  bool list_contains(list_t * self, bool(comparer(void *, void *)), void * search_value);
 
-#define LIST_NEXT(li) (li)->next
+#define LIST_NEXT(li)     (li)->next
 #define LIST_IS_EMPTY(li) (*(li) == nullptr)
 
-// ! Freeing the list.
-/* !
+  // ! Freeing the list.
+  /* !
  * /param self The list to be freed.
  */
-void list_free(list_t ** self);
+  void list_free(list_t ** self);
 
-// ! Remove an item from the list.
-/* !
+  // ! Remove an item from the list.
+  /* !
  * /param self The list to remove from.
  * /param comparer The compare function.
  * /param search_value An item to be removed(be passed to comparer as the 2nd argument).
  * /return The pointer to the removed list_t. If it is nullptr, there are no matched items.
  */
-list_t * list_remove(list_t ** self, bool(comparer(void *, void *)), void * search_value);
+  list_t * list_remove(list_t ** self, bool(comparer(void *, void *)), void * search_value);
 
-// ! Remove an item from the queue.
-/* !
+  // ! Remove an item from the queue.
+  /* !
  * /param self The queue to remove from.
  * /param comparer The compare function.
  * /param search_value An item to be removed(be passed to comparer as the 2nd argument).
  * /param undo Where the return value removed from.
  * /return The pointer to the removed list_t. If it is nullptr, there are no matched items.
  */
-list_t * queue_remove(queue_t * self, bool(comparer(void *, void *)), void * search_value);
+  list_t * queue_remove(queue_t * self, bool(comparer(void *, void *)), void * search_value);
 
-// ! Default counstroctor of queue_t.
-/* !
+  // ! Default counstroctor of queue_t.
+  /* !
  * /param out The result
  * /return The status code
  */
-static inline em_result queue_default(queue_t * out) {
-  em_result errres;
-  CHKERR(list_default(&(out->head)));
-  out->last = &(out->head);
-  return EM_RESULT_OK;
- err: return errres;
-}
+  static inline em_result
+  queue_default(queue_t * out)
+  {
+    em_result errres;
+    CHKERR(list_default(&(out->head)));
+    out->last = &(out->head);
+    return EM_RESULT_OK;
+err:
+    return errres;
+  }
 
-// ! Enqueue
-/* !
+  // ! Enqueue
+  /* !
  * /param out The queue to add to
  * /param value_size sizeof(value)
  * /param value The value to be added
  * /return The status code
  */
-em_result queue_enqueue(queue_t * out, size_t value_size, void * value);
+  em_result queue_enqueue(queue_t * out, size_t value_size, void * value);
 #define queue_enqueue2(out, ty, val) queue_enqueue(out, sizeof(ty), val)
 
-// ! Enqueue
-/* !
+  // ! Enqueue
+  /* !
  * /param out The queue to add to
  * /param value_size sizeof(value)
  * /param value The value to be added
  * /param entry_ptr The pointer of copied buffer
  * /return The status code
  */
-em_result queue_enqueue3(queue_t * out, size_t value_size, void * value, void ** entry_ptr);
+  em_result queue_enqueue3(queue_t * out, size_t value_size, void * value, void ** entry_ptr);
 #define queue_enqueue4(out, ty, val, entry_ptr) queue_enqueue(out, sizeof(ty), val, entry_ptr)
 
-// ! Dequeue
-/* !
+  // ! Dequeue
+  /* !
  * /param self The queue to dequeue from
  * /param value_size sizeof(value)
  * /param out The result
  * /return The status code
  */
-em_result queue_dequeue(queue_t * self, size_t value_size, void * out);
+  em_result queue_dequeue(queue_t * self, size_t value_size, void * out);
 #define queue_dequeue2(self, ty, out) queue_dequeue(self, sizeof(ty), out)
 
-// ! Add to the head of the queue.
-/* !
+  // ! Add to the head of the queue.
+  /* !
  * /param self The queue to dequeue from
  * /param value_size sizeof(value)
  * /param out The result
  * /return The status code
  */
-em_result queue_add_head(queue_t * out, size_t value_size, void * value);
+  em_result queue_add_head(queue_t * out, size_t value_size, void * value);
 #define queue_add_head2(self, ty, out) queue_add_head(self, sizeof(ty), out)
 
-#define FOREACH_LIST(v, li) if(li!=nullptr)for(v = &(li->value); !LIST_IS_EMPTY(&li); li = LIST_NEXT(li), v = &(li->value))
+#define FOREACH_LIST(v, li)                                                                        \
+  if(li != nullptr)                                                                                \
+    for(v = &(li->value); !LIST_IS_EMPTY(&li); li = LIST_NEXT(li), v = &(li->value))
 
 #ifdef __cplusplus
 }

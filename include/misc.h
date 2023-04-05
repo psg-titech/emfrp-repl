@@ -10,12 +10,13 @@
 #include <tchar.h>
 #endif
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif /* __cplusplus */
 #if defined(_WIN32)
-typedef TCHAR char_t;
+  typedef TCHAR char_t;
 #define em_strlen(s) _tcslen(s)
-#define strdup(s) _strdup(s)
+#define strdup(s)    _strdup(s)
 #else
 typedef char char_t;
 #define em_strlen(s) strlen(s)
@@ -25,13 +26,13 @@ typedef char char_t;
 #if __cplusplus < 201100L
 // nullptr is appeared in C23.
 #define nullptr NULL
-typedef void* nullptr_t;
+  typedef void * nullptr_t;
 #endif
-#else 
+#else
 #if __STD_VERSION__ <= 201710L
 // nullptr is appeared in C23.
 #define nullptr NULL
-typedef void* nullptr_t;
+typedef void * nullptr_t;
 #endif
 #endif
 
@@ -46,7 +47,7 @@ typedef void* nullptr_t;
 #define DEBUGBREAK __debugbreak()
 #elif __GNUC__
 #define DEBUGBREAK __builtin_trap()
-#elif __clang__	
+#elif __clang__
 #define DEBUGBREAK __builtin_debugtrap()
 #endif
 

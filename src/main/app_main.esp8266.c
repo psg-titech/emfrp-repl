@@ -18,9 +18,11 @@
 
 machine_t m;
 
-void mainTask(void) {
-  string_t line;
-  parser_reader_t parser_reader;
+void
+mainTask(void)
+{
+  string_t            line;
+  parser_reader_t     parser_reader;
   parser_toplevel_t * parsed;
   string_null(&line);
   initialize_console();
@@ -36,33 +38,37 @@ void mainTask(void) {
       continue;
     }
     parser_reader_new(&parser_reader, &line);
-    parser_context_t *ctx = parser_create(&parser_reader);
+    parser_context_t * ctx = parser_create(&parser_reader);
     if(!parser_parse(ctx, (void **)&parsed)) {
       object_t * o = nullptr;
-//      printf("Heap free size: %d\n", esp_get_free_heap_size());
+      //      printf("Heap free size: %d\n", esp_get_free_heap_size());
       parser_toplevel_print(parsed);
       printf("\n");
       em_result res = machine_exec(&m, parsed, &o);
       // We have to think free_deep or free_shallow.
       if(res != EM_RESULT_OK) {
-	printf("machine_exec failure(%d): %s\n", res, EM_RESULT_STR_TABLE[res]);
-	printf("%s\n", EM_RESULT_STR_TABLE[res]);
-	parser_toplevel_free_deep(parsed);
+        printf("machine_exec failure(%d): %s\n", res, EM_RESULT_STR_TABLE[res]);
+        printf("%s\n", EM_RESULT_STR_TABLE[res]);
+        parser_toplevel_free_deep(parsed);
       } else {
-	parser_toplevel_free_shallow(parsed);
-	printf("OK, ");
-	object_print(o);
-	printf("\n");
+        parser_toplevel_free_shallow(parsed);
+        printf("OK, ");
+        object_print(o);
+        printf("\n");
       }
       machine_debug_print_definitions(&m);
     }
     parser_destroy(ctx);
-//    printf("Heap free size: %d\n", esp_get_free_heap_size());
+    //    printf("Heap free size: %d\n", esp_get_free_heap_size());
   }
-  while(1){ vTaskDelay(100000); }
+  while(1) {
+    vTaskDelay(100000);
+  }
 }
 
-void app_main() {
+void
+app_main()
+{
   xTaskCreate(mainTask, "main_task", 16384, nullptr, 10, nullptr);
 }
 

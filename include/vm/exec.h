@@ -13,17 +13,18 @@
 #include "collections/list_t.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif /* __cplusplus */
 
-// ! Execute AST.
-/* !
+  // ! Execute AST.
+  /* !
  * \param m The machine.
  * \param v The expression to be executed.
  * \param out The result.
  * \return The status code.
  */
-em_result exec_ast(machine_t * m, parser_expression_t * v, object_t ** out);
+  em_result exec_ast(machine_t * m, parser_expression_t * v, object_t ** out);
 
 #ifdef __cplusplus
 }
