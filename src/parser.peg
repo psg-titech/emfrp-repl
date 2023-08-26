@@ -6,7 +6,6 @@
 #include "string_t.h"
 #include "emmem.h"
 #include "em_result.h"
-#include "hal/str.mbed.h"
 
 #include "extern_c_pre.h"
 typedef struct parser_reader_t {
@@ -29,7 +28,7 @@ parser_reader_getchar(parser_reader_t * reader);
 #include "ast.h"
 #include "misc.h"
 #define PCC_BUFFERSIE 64
-#if defined(__ESP_IDF__) || defined(RPI_PICO) || defined(__MBED__)
+#if defined(__ESP_IDF__) || defined(RPI_PICO)
 #define PCC_POOL_MIN_SIZE 256
 #define PCC_BUFFER_MIN_SIZE 8
 #endif

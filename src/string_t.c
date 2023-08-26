@@ -2,7 +2,7 @@
  * @file   string_t.c
  * @brief  Pascal String Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/21
+ * @date   2023/8/28
  ------------------------------------------- */
 
 #include "string_t.h"
@@ -25,7 +25,7 @@ string_copy(string_t * dst, const string_t * src)
 {
   em_result errres = EM_RESULT_OK;
   dst->length      = src->length;
-  em_allocarray((void **)&(dst->buffer), sizeof(char), src->length + 1);
+  CHKERR(em_allocarray((void **)&(dst->buffer), sizeof(char), src->length + 1));
   memcpy(dst->buffer, src->buffer, src->length * sizeof(char));
   dst->buffer[dst->length] = '\0';
 err:
