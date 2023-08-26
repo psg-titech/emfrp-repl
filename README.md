@@ -9,8 +9,8 @@ This is the tested environment.
    * gcc 8.3 (also clang)
  * Haiku R1/beta hrev55181+67
    * gcc 11.2
- * Debian 12
-   * clang 12.0 or above
+ * Debian 12 bookworm
+   * clang-13 or above
  * macOS 13 Ventura
    * MacBook Air (M1, 2020)
 
@@ -33,9 +33,8 @@ We recommend to use clang-format version 13 for formatting.
 ### Windows
 #### Visual Studio 2022
 1. Install Visual Studio 2022 or newer(with C++ Desktop Development workload) and CMake support.
-2. Open `example/windows/`.
-3. Open `example/windows/CMakeLists.txt`.
-4. Build and debug!
+2. Open `example/windows/CMakeLists.txt`.
+3. Build and debug!
 
 #### Visual Studio 2019, 2022
 1. Install Visual Studio 2019 or newer(with C++ Desktop Development workload) and CMake.
