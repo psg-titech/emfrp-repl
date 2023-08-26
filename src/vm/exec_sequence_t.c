@@ -2,7 +2,7 @@
  * @file   exec_sequence_t.c
  * @brief  Execution Sequence.
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/6
+ * @date   2023/8/26
  ------------------------------------------- */
 #include "vm/exec_sequence_t.h"
 #include "vm/exec.h"
@@ -18,8 +18,8 @@ get_dependencies_ast(machine_t * machine, parser_expression_t * v, list_t /*<str
   if(EXPR_KIND_IS_INTEGER(v) || EXPR_KIND_IS_BOOLEAN(v)) return EM_RESULT_OK;
   if(v->kind == EXPR_KIND_IDENTIFIER) {
     string_t * s = &(v->value.identifier);
-    object_t * __out;
-    if(!variable_table_lookup(machine->variable_table, &__out, s)) {
+    object_t * ignore;
+    if(!variable_table_lookup(machine->variable_table, &ignore, s)) {
       CHKERR(list_add2(out, string_t *, &s));
     } else
       return EM_RESULT_OK;
