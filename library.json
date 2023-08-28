@@ -1,0 +1,38 @@
+{
+  "name": "Emfrp-REPL",
+  "version": "0.1.0",
+  "description": "A REPL implementation of Emfrp, running on embedded devices.",
+  "keywords": "FRP, interpreter",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/psg-titech/emfrp-repl.git"
+  },
+  "headers": "emfrp.h",
+  "authors":
+  [
+    {
+      "name": "Go Suzuki",
+      "email": "puyogo.suzuki@gmail.com",
+      "url": "https://github.com/puyogo-suzuki"
+    },
+    {
+      "name": "Programming Systems Group, Tokyo Tech",
+      "url": "https://psg.c.titech.ac.jp/"
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/psg-titech/emfrp-repl/",
+  "dependencies": {},
+  "frameworks": "*",
+  "platforms": "*",
+  "scripts": {
+    "postinstall": "script/platformio-postinstall.py"
+  },
+  "export": {
+    "exclude": ["example/*", "docs/*", "script/*"]
+  },
+  "build": {
+    "flags": "-D __PLATFORM_IO__"
+  }
+}

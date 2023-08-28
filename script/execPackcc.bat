@@ -3,9 +3,17 @@ REM @brief  execPackcc.sh <packcc/build/msvc> <src/parser.peg> <dest. of emfrp_p
 REM @author Go Suzuki <puyogo.suzuki@gmail.com>
 REM @date   2023/8/13
 
+set MSBUILD=msbuild
+where %MSBUILD%
+if %ERRORLEVEL% NEQ 0 (
+  for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do (
+    set MSBUILD=%%i
+  )
+)
+
 if not exist %1/x64/Release/packcc.exe (
    echo "Packcc has not already built. Build it."
-   msbuild %1/msvc.sln /t:build /p:configuration=release /p:Platform="x64"
+   "%MSBUILD%" %1/msvc.sln /t:build /p:configuration=release /p:Platform="x64"
    if not exist %1/x64/Release/packcc.exe (
       echo "Packcc compilation failed. Aborting."
       exit 1
