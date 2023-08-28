@@ -2,7 +2,7 @@
  * @file   emfrp.c
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/18
+ * @date   2023/8/28
  ------------------------------------------- */
 #include "vm/machine.h"
 #include "vm/object_t.h"
@@ -39,7 +39,7 @@ emfrp_repl(emfrp_t * self, const char * str, object_t ** out)
   parser_reader_t     parser_reader;
   parser_toplevel_t * parsed;
   string_t            line;
-  string_new1(&line, strdup(str));
+  string_new1(&line, em_strdup(str));
   parser_reader_new(&parser_reader, &line);
   parser_context_t * ctx = parser_create(&parser_reader);
   if(!parser_parse(ctx, (void **)&parsed)) {

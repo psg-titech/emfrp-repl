@@ -2,7 +2,7 @@
  * @file   emmem.h
  * @brief  Memory Management Implementation
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/3/3
+ * @date   2023/8/28
  ------------------------------------------- */
 
 #pragma once
@@ -17,7 +17,6 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-#define em_strdup(s) strdup(s)
   static inline em_result
   em_malloc(void ** out, size_t size)
   {
@@ -53,6 +52,20 @@ em_reallocarray(void ** out, void * ptr, size_t nmemb, size_t size)
 #endif
   // I cannot figure out the equivalent expression before C23.
   //#define em_malloc(elem) (typeof(elem)*)malloc(sizeof(typeof(elem)))
+
+
+#ifdef __ZEPHYR__
+static inline char * em_strdup(const char * s) {
+  int len = em_strlen(s);
+  char * out;
+  em_result res = em_allocarray((void *)&out, len + 1, sizeof(1));
+  if(res != EM_RESULT_OK) return nullptr;
+  memmove(out, s, len + 1);
+  return out;
+}
+#else
+#define em_strdup(s) strdup(s)
+#endif
 
 #ifdef __cplusplus
 }
