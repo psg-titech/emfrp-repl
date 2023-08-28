@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/8/13
+ * @date   2023/8/29
  ------------------------------------------- */
 #include <stdio.h>
 #include <Windows.h>
@@ -78,7 +78,6 @@ main(void)
     parser_reader_new(&parser_reader, &line);
     if(line.length == 14 && strncmp(line.buffer, "exec_iteration", 14) == 0) {
       printf("Status: %s\n", EM_RESULT_STR_TABLE[machine_indicate(&m, nullptr, 0)]);
-      em_free(line.buffer);
       continue;
     }
     if(line.length == 4 && strncmp(line.buffer, "exit", 4) == 0) return 0;
