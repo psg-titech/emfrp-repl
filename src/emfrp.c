@@ -33,7 +33,7 @@ err:
 }
 
 EM_EXPORTDECL em_result
-emfrp_repl(emfrp_t * self, char * str, object_t ** out)
+emfrp_repl(emfrp_t * self, const char * str, object_t ** out)
 {
   em_result           errres = EM_RESULT_OK;
   parser_reader_t     parser_reader;

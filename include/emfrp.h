@@ -2,7 +2,7 @@
  * @file   emfrp.h
  * @brief  Emfrp Main Functions
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/1/14
+ * @date   2023/8/28
  ------------------------------------------- */
 #pragma once
 #include <stdint.h>
@@ -32,7 +32,7 @@ extern "C"
   typedef struct emfrp_t emfrp_t;
 
   EM_EXPORTDECL em_result emfrp_create(emfrp_t ** result);
-  EM_EXPORTDECL em_result emfrp_repl(emfrp_t * self, char * str, em_object_t ** value);
+  EM_EXPORTDECL em_result emfrp_repl(emfrp_t * self, const char * str, em_object_t ** value);
   EM_EXPORTDECL em_result
   emfrp_add_input_node(emfrp_t * self, char * node_name, em_input_callback callback);
   EM_EXPORTDECL em_result
