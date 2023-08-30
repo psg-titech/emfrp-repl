@@ -2,7 +2,7 @@
  * @file   main.c
  * @brief  Emfrp-repl Entry Point
  * @author Go Suzuki <puyogo.suzuki@gmail.com>
- * @date   2023/8/29
+ * @date   2023/8/30
  ------------------------------------------- */
 
 #include <zephyr/kernel.h>
@@ -159,23 +159,23 @@ main()
       k_usleep(100000000);
     }
   }
-  puts("Emfrp-REPL on Micro:bit V2.");
   objectFalse = emfrp_get_false_object();
-  puts("Prepare LED.");
   setupLED();
-  puts("Prepare Btn.");
   setupBtn();
-  puts("Prepare Uart.");
   setupTimer();
   if(setupUart()) { puts("UART Device Failure."); }
-  puts("Loop start.");
+  puts("Emfrp-REPL on Micro:bit V2.");
   while(true) {
+    printf("> ");
     char * buf = console_getline();  //readLine();
     if(buf != NULL) {
-      em_object_t * result;
+      em_object_t * result = NULL;
       k_timer_stop(&updateTimer);
-      puts(EM_RESULT_STR_TABLE[emfrp_repl(emfrp, buf, &result)]);
-      emfrp_print_object(result);
+      em_result status = emfrp_repl(emfrp, buf, &result);
+      puts(EM_RESULT_STR_TABLE[status]);
+      if(status == EM_RESULT_OK) {
+        emfrp_print_object(result); puts("");
+      }
       k_timer_start(&updateTimer, K_MSEC(33), K_MSEC(33));
       puts("");
     } else {

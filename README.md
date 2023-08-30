@@ -61,3 +61,15 @@ Execute `install.ps1`, or `install.sh` in the esp-idf repository.
 
 ## Compilation for ESP8266
 DOES NOT WORK DUE TO A LINKER ISSUE.
+
+## Compilation for micro:bit V2 or Zephyr-based micro controllers.
+You need Zephyr. Please install following the instruction: https://docs.zephyrproject.org/latest/develop/getting_started/index.html  
+
+### Preparation
+1. Move to `example/microbitv2-zephyr`.
+2. Run `west init`.
+
+### Building&Flashing
+1. Move to `example/microbitv2-zephyr`.
+2. Run `west build`.
+3. Run `west flash`.
