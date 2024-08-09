@@ -36,7 +36,7 @@ extern "C"
   }
 
 #define em_free(ptr) free(ptr)
-#if _MSC_VER || __APPLE__ || __MBED__
+#if _MSC_VER || __APPLE__
 #define em_allocarray(o, nmemb, size)        em_malloc(o, (size) * (nmemb))
 #define em_reallocarray(o, ptr, size, nmemb) em_realloc(o, ptr, (size) * (nmemb))
 #else
@@ -53,16 +53,17 @@ em_reallocarray(void ** out, void * ptr, size_t nmemb, size_t size)
   // I cannot figure out the equivalent expression before C23.
   //#define em_malloc(elem) (typeof(elem)*)malloc(sizeof(typeof(elem)))
 
-
 #ifdef __ZEPHYR__
-static inline char * em_strdup(const char * s) {
-  int len = em_strlen(s);
-  char * out;
-  em_result res = em_allocarray((void *)&out, len + 1, sizeof(1));
-  if(res != EM_RESULT_OK) return nullptr;
-  memmove(out, s, len + 1);
-  return out;
-}
+  static inline char *
+  em_strdup(const char * s)
+  {
+    int       len = em_strlen(s);
+    char *    out;
+    em_result res = em_allocarray((void *)&out, len + 1, sizeof(1));
+    if(res != EM_RESULT_OK) return nullptr;
+    memmove(out, s, len + 1);
+    return out;
+  }
 #else
 #define em_strdup(s) strdup(s)
 #endif
